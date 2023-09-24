@@ -1,0 +1,870 @@
+---
+title: "Studio del genere Action e di alcune sue varianti"
+author: "Bertoli Giovanni - 158659 - 27 settembre 2023"
+subtitle: Esame di Fondamenti di Scienza dei Dati
+output:
+  ioslides_presentation:
+    css: ./style.css
+    incremental: yes
+    editor_options:
+      chunk_output_type: inline
+  beamer_presentation:
+    incremental: yes
+---
+
+```{css, echo=FALSE}
+slides > slide {
+overflow-y: auto !important;
+}
+```
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+
+
+library(readr)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(tidyverse)
+library(gridExtra)
+library(data.table)
+library(stringr)
+library(maps)
+library(RColorBrewer)
+
+
+VGList <- read.csv(file="C:/Users/Giovanni/Desktop/Giovanni/Università/DataScience2023/Videogames_List2.csv")
+VGList <- subset(VGList, select = -X)
+MyGames <- read.csv(file = "C:/Users/Giovanni/Desktop/Giovanni/Università/DataScience2023/MyGames.csv")
+MyGames <- subset(MyGames, select = -X)
+```
+
+
+
+
+# Introduzione
+
+
+##
+Come maggior parte di noi ragazzi, anche io sono fan della tecnologia e dei videogiochi; pertanto ho voluto creare questo progetto per fare una analisi sui miei generi preferiti cercando di estrapolare informazioni con lo scopo di ottenere una visione generale su di essi.
+
+
+>- Quali sono i generi da me più giocati
+>- Le maggiori case di sviluppo
+>- Confronto critica - giocatori
+>- Analisi sull'andamento di pubblicazione
+>- Analisi delle piattaforme
+>- Conclusioni
+
+
+
+# Dataset
+
+##
+Per fare ciò mi sono servito di un dataset ottenuto su Kaggle:
+
+>- Dati sulla critica dei videogames del portale MeatCritic: 
+[VGList](https://www.kaggle.com/datasets/brunovr/metacritic-videogames-data)
+
+Esso contiene dati di circa 18.000 giochi: uscita, sviluppatori, generi, voti di critica e giocatori; in più ho usato il dataset dei miei mideogiochi creato da me che poi ho unito a VGList per ottenere in automatico i generi dei giochi.
+Il dataset è stato opportunatamente sistemato, per eliminare dati superflui che non servivano alla mia analisi, o per addattare il formato dei valori di alcune variabili. In particolare:
+
+>- La data: ho mantenuto solo l'anno di pubblicazione del videogioco
+>- Generi e sviluppatori: li ho separati in più colonne per avere una visione più ampia su di essi
+
+
+
+
+
+# Quali generi analizzo?
+
+##
+
+Ho deciso di ricavare dalla lista dei videogiochi da me giocati i 3 generi di videogames da me più apprezzati, basandomi sulla quantità di giochi:
+
+```{r echo=FALSE}
+
+generi_pr <- MyGames %>%
+  select(genre_1, genre_2)
+
+generi_pr <- generi_pr %>%
+  pivot_longer(cols = starts_with("genre"), names_to = "Colonna", values_to = "Generi")
+
+generi_pr <- generi_pr %>%
+  group_by(Generi) %>%
+  summarise(count = n()) %>%
+  na.omit()
+
+# elimino delle sottocategorie dei generi principali
+generi_pr <- generi_pr[-c(5, 7, 12, 19, 21), ]
+
+# creo il grafico a barre
+gr_mygenres <- ggplot(generi_pr, aes(x = generi_pr$Generi, y = generi_pr$count, fill = generi_pr$Generi)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        panel.background = element_rect(fill = "#FFEFD5"),
+        panel.grid = element_blank()) +
+  labs(x = "Generi", y = "Numero di titoli") +
+  guides(fill = FALSE)  # Nascondi la legenda
+
+print(gr_mygenres)
+
+```
+
+>- *Actio*n: 10 titoli
+>- *Action-Adventure*: 6 titoli
+>- *Action-RPG*: 5 titoli
+
+
+#  Le maggiori case di sviluppo
+
+##
+
+Quali sono le case di sviluppo che hanno pubblicato più giochi del genere Action, Action-Adventure e Action-RPG??
+
+```{r echo=FALSE}
+
+selezione_svil <- VGList %>%
+  select(Sviluppatore_1, Sviluppatore_2, genre_1, genre_2, genre_3, genre_4)
+
+selezione_svil <- selezione_svil %>%
+  pivot_longer(cols = starts_with("Sviluppatore"), names_to = "Colonna_1", values_to = "Sviluppatore") %>%
+  pivot_longer(cols = starts_with("genre"), names_to = "Colonna_2", values_to = "Tipologia")
+
+cont_svil <- selezione_svil %>%
+  group_by(Sviluppatore, Tipologia) %>%
+  summarise(Conteggio = n(), .groups = "drop")
+
+cont_svil <- cont_svil %>%
+  pivot_wider(names_from = Tipologia, values_from = Conteggio, values_fill = 0)
+
+Act_Cont <- cont_svil %>%
+  select(Sviluppatore, Action) %>%
+  na.omit()
+
+ActRPG_Cont <- cont_svil %>%
+  select(Sviluppatore, `Action RPG`) %>%
+  na.omit()
+
+ActADV_Cont <- cont_svil %>%
+  select(Sviluppatore, `Action Adventure`) %>%
+  na.omit()
+
+
+gr_Act_Cont <- ggplot(data = subset(Act_Cont, Action > 59),
+                   aes(x = Sviluppatore, y = Action, fill = "Action" )) +
+  geom_bar(stat = "identity") +
+  labs(x = "Sviluppatori Action", y = "Pubblicazioni") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        panel.background = element_rect(fill = "#FFEFD5"),
+        panel.grid = element_blank()) +
+  scale_fill_manual(values = "#FF6633") +
+  guides(fill = FALSE)  # Nascondi la legenda
+
+gr_ActRPG_Cont <- ggplot(data = subset(ActRPG_Cont, `Action RPG` > 17),
+                   aes(x = Sviluppatore, y = `Action RPG`, fill = "Action RPG")) +
+  geom_bar(stat = "identity") +
+  labs(x = "Sviluppatori Action-RPG", y = "") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        panel.background = element_rect(fill = "#FFEFD5"),
+        panel.grid = element_blank()) +
+  scale_fill_manual(values = "#CCCC33") +
+  guides(fill = FALSE)  # Nascondi la legenda
+
+gr_ActADV_Cont <- ggplot(data = subset(ActADV_Cont, `Action Adventure` > 34),
+                   aes(x = Sviluppatore, y = `Action Adventure`, fill = "Action Adventure")) +
+  geom_bar(stat = "identity") +
+  labs(x = "Sviluppatori Action-Adventure", y = "") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        panel.background = element_rect(fill = "#FFEFD5"),
+        panel.grid = element_blank()) +
+  scale_fill_manual(values = "#CC9933") +
+  guides(fill = FALSE)  # Nascondi la legenda
+
+grid.arrange(gr_Act_Cont, gr_ActRPG_Cont, gr_ActADV_Cont, ncol = 3, widths = c(5, 5, 5))
+
+```
+
+>- Maggiori produttori di *Action*: Ubisoft,  ElectronicArts (EA), Omegaforce
+>- Maggiori produttori di *Action-RPG*: BioWare, Capcom, SquareEnix
+>- Maggiori produttori di *Action-Adventure*: Ubisoft, Capcom, Traveller's Tales
+
+
+
+# Confronto Critica - Giocatori
+
+## Genere Action
+
+Come sono valutate le case di produzione dalla critica e dai giocatori?
+
+```{r echo=FALSE}
+
+selezione_val_svil <- VGList %>%
+  select(Sviluppatore_1, Sviluppatore_2, genre_1, genre_2, genre_3, genre_4, PuntMetacritic, PuntGiocatore)
+
+# Converto i valori "tbd" in NA nella colonna PuntGiocatore
+selezione_val_svil$PuntGiocatore[selezione_val_svil$PuntGiocatore == "tbd"] <- NA
+selezione_val_svil$PuntGiocatore <- as.numeric(selezione_val_svil$PuntGiocatore)
+
+# Considero solo il genere Action
+filtered_data_Action <- selezione_val_svil %>%
+  filter(genre_1 == "Action" | genre_2 == "Action" | genre_3 == "Action" | genre_4 == "Action")
+
+# Posso levare i generi
+selected_data_Action <- filtered_data_Action %>%
+  select(Sviluppatore_1, Sviluppatore_2, PuntMetacritic, PuntGiocatore)
+
+# Creo una colonna che raccoglie Svil1 d 2 
+selected_data_Action <- selected_data_Action %>%
+  mutate(Sviluppatore = ifelse(!is.na(Sviluppatore_1), Sviluppatore_1, Sviluppatore_2)) %>%
+  select(-Sviluppatore_1, -Sviluppatore_2)
+
+# porto tutti i valori ad avere 2 unità
+selected_data_Action$PuntGiocatore <- selected_data_Action$PuntGiocatore * 10
+
+#Prendo solo gli sviluppatori individuati nel punto precedente
+sviluppatori_desiderati_AC <- c("Ubisoft", "ElectronicArts", "OmegaForce", "Capcom", "Namco", "Nintendo", "TelltaleGames", "Rebellion")
+selected_data_Action <- selected_data_Action[selected_data_Action$Sviluppatore %in% sviluppatori_desiderati_AC, ]
+
+selected_data_Action <- selected_data_Action %>%
+  pivot_longer(cols = c(PuntGiocatore, PuntMetacritic), names_to = "Voti", values_to = "Valore")
+
+gr_Act_Val <- ggplot(selected_data_Action, aes(x = Sviluppatore, y = Valore, fill = Voti)) +
+  geom_boxplot() +
+  labs(x = "Nome",
+       y = "Valore") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+print(gr_Act_Val)
+```
+
+La critica è leggermente più genereosa nelle valutazioni, fanno eccezione in particolare la OmegaForce e la Namco.
+
+## Genere Action-RPG
+
+
+
+```{r echo=FALSE}
+
+# Considero solo il genere Action-RPG
+filtered_data_ActionRPG <- selezione_val_svil %>%
+  filter(genre_1 == "Action RPG" | genre_2 == "Action RPG" | genre_3 == "Action RPG" | genre_4 == "Action RPG")
+
+# Posso levare i generi
+selected_data_ActionRPG <- filtered_data_ActionRPG %>%
+  select(Sviluppatore_1, Sviluppatore_2, PuntMetacritic, PuntGiocatore)
+
+# Creo una colonna che raccoglie Svil1 d 2 
+selected_data_ActionRPG <- selected_data_ActionRPG %>%
+  mutate(Sviluppatore = ifelse(!is.na(Sviluppatore_1), Sviluppatore_1, Sviluppatore_2)) %>%
+  select(-Sviluppatore_1, -Sviluppatore_2)
+
+# porto tutti i valori ad avere 2 unità
+selected_data_ActionRPG$PuntGiocatore <- selected_data_ActionRPG$PuntGiocatore * 10
+
+#Prendo solo gli sviluppatori individuati nel punto precedente
+sviluppatori_desiderati_ACRPG <- c("BioWare", "Capcom", "SquareEnix", "FromSoftware", "Falcom", "BandaiNamcoGames", "CDProjektRedStudio", "BlizzardEntertainment")
+selected_data_ActionRPG <- selected_data_ActionRPG[selected_data_ActionRPG$Sviluppatore %in% sviluppatori_desiderati_ACRPG, ]
+
+selected_data_ActionRPG <- selected_data_ActionRPG %>%
+  pivot_longer(cols = c(PuntGiocatore, PuntMetacritic), names_to = "Voti", values_to = "Valore")
+
+gr_ActRPG_Val <- ggplot(selected_data_ActionRPG, aes(x = Sviluppatore, y = Valore, fill = Voti)) +
+  geom_boxplot() +
+  labs(labs(x = "Nome",
+       y = "Valore")) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+print(gr_ActRPG_Val)
+```
+
+In questo genere si ha una estremizzazione, in termini di giudizio, tra critica e giocatori. 
+
+## Genere Action-Adventure
+
+
+
+```{r echo=FALSE}
+
+# Considero solo il genere Action-RPG
+filtered_data_ActionAdv <- selezione_val_svil %>%
+  filter(genre_1 == "Action Adventure" | genre_2 == "Action Adventure" | genre_3 == "Action Adventure" | genre_4 == "Action Adventure")
+
+# Posso levare i generi
+selected_data_ActionAdv <- filtered_data_ActionAdv %>%
+  select(Sviluppatore_1, Sviluppatore_2, PuntMetacritic, PuntGiocatore)
+
+# Creo una colonna che raccoglie Svil1 d 2 
+selected_data_ActionAdv <- selected_data_ActionAdv %>%
+  mutate(Sviluppatore = ifelse(!is.na(Sviluppatore_1), Sviluppatore_1, Sviluppatore_2)) %>%
+  select(-Sviluppatore_1, -Sviluppatore_2)
+
+# porto tutti i valori ad avere 2 unità
+selected_data_ActionAdv$PuntGiocatore <- selected_data_ActionAdv$PuntGiocatore * 10
+
+#Prendo solo gli sviluppatori individuati nel punto precedente
+sviluppatori_desiderati_ACADV <- c("Ubisoft", "Capcom", "Traveller'sTales", "TTGames", "RockstarGames",  "ElectronicArts", "DONTNODEntertainment", "IoInteractive")
+selected_data_ActionAdv <- selected_data_ActionAdv[selected_data_ActionAdv$Sviluppatore %in% sviluppatori_desiderati_ACADV, ]
+
+selected_data_ActionAdv <- selected_data_ActionAdv %>%
+  pivot_longer(cols = c(PuntGiocatore, PuntMetacritic), names_to = "Voti", values_to = "Valore")
+
+gr_ActAdv_Val <- ggplot(selected_data_ActionAdv, aes(x = Sviluppatore, y = Valore, fill = Voti)) +
+  geom_boxplot() +
+  labs(labs(x = "Nome",
+       y = "Valore")) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+print(gr_ActAdv_Val)
+```
+
+Interessanti l'analisi dei casi DONTNODE - ElectronicArts e RockstarGames
+
+
+# Analisi sull'andamento di pubblicazione 
+
+## Action
+Ci sono stati dei cambiamenti nella produzione di giochi?
+In blu ho la quantità di giochi, in rosso il voto della critica e in verde i voti dei giocatori.
+
+```{r echo=FALSE}
+
+produzione <- VGList %>%
+  select(Sviluppatore_1, Sviluppatore_2, AnnoPubblicazione, genre_1, genre_2, genre_3, genre_4, PuntGiocatore, PuntMetacritic)
+
+produzione_ACT <- produzione%>%
+  filter(genre_1 == "Action" | genre_2 == "Action" | genre_3 == "Action" | genre_4 == "Action")
+
+produzione_ACT <- produzione_ACT %>%
+  mutate(Sviluppatore = coalesce(Sviluppatore_1, Sviluppatore_2)) %>%
+  select(-Sviluppatore_1, -Sviluppatore_2)
+
+produzione_ACT$PuntGiocatore[produzione_ACT$PuntGiocatore == "tbd"] <- NA
+produzione_ACT$PuntGiocatore <- as.numeric(produzione_ACT$PuntGiocatore)
+produzione_ACT$PuntGiocatore <- produzione_ACT$PuntGiocatore * 10
+
+count_produzione_ACT <- produzione_ACT %>%
+  group_by(Sviluppatore, AnnoPubblicazione) %>%
+  summarise(Numero_Giochi = n()) %>%
+  na.omit()
+
+critp_produzione_ACT <- produzione_ACT %>%
+  group_by(Sviluppatore, AnnoPubblicazione) %>%
+  summarise(Media_VotoPlayer = mean(PuntGiocatore, na.rm = TRUE)) %>%
+  na.omit()
+
+crit_produzione_ACT <- produzione_ACT %>%
+  group_by(Sviluppatore, AnnoPubblicazione) %>%
+  summarise(Media_VotoCrit = mean(PuntMetacritic, na.rm = TRUE)) %>%
+  na.omit()
+
+produzione_ACT <- left_join(count_produzione_ACT, critp_produzione_ACT)
+produzione_ACT <- left_join(produzione_ACT, crit_produzione_ACT)
+
+grafico_Ubisoft <- ggplot(subset(produzione_ACT, produzione_ACT$Sviluppatore == "Ubisoft")) +
+  geom_line(aes(x = AnnoPubblicazione, y = Numero_Giochi, color = "Numero di Giochi"), size = 1) +
+  geom_line(aes(x = AnnoPubblicazione, y = Media_VotoPlayer, color = "Media Voto Giocatori"), size = 1) +
+  geom_point(aes(x = AnnoPubblicazione, y = Media_VotoPlayer), size = 1) +
+  geom_line(aes(x = AnnoPubblicazione, y = Media_VotoCrit, color = "Media Voto Critica"), size = 1) +
+  geom_point(aes(x = AnnoPubblicazione, y = Media_VotoCrit), size = 1) +
+  labs(title = "Ubisoft",
+    x = "",
+    y = "Valore",
+    color = "Legenda") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),legend.position = "none")
+
+grafico_ElectronicArts <- ggplot(subset(produzione_ACT, produzione_ACT$Sviluppatore == "ElectronicArts")) +
+  geom_line(aes(x = AnnoPubblicazione, y = Numero_Giochi, color = "Numero di Giochi"), size = 1) +
+  geom_line(aes(x = AnnoPubblicazione, y = Media_VotoPlayer, color = "Media Voto Giocatori"), size = 1) +
+  geom_point(aes(x = AnnoPubblicazione, y = Media_VotoPlayer), size = 1) +
+  geom_line(aes(x = AnnoPubblicazione, y = Media_VotoCrit, color = "Media Voto Critica"), size = 1) +
+  geom_point(aes(x = AnnoPubblicazione, y = Media_VotoCrit), size = 1) +
+  labs(title = "ElectronicArts",
+    x = "",
+    y = "",
+    color = "Legenda") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),legend.position = "none")
+
+grafico_OmegaForce <- ggplot(subset(produzione_ACT, produzione_ACT$Sviluppatore == "OmegaForce")) +
+  geom_line(aes(x = AnnoPubblicazione, y = Numero_Giochi, color = "Numero di Giochi"), size = 1) +
+  geom_line(aes(x = AnnoPubblicazione, y = Media_VotoPlayer, color = "Media Voto Giocatori"), size = 1) +
+  geom_point(aes(x = AnnoPubblicazione, y = Media_VotoPlayer), size = 1) +
+  geom_line(aes(x = AnnoPubblicazione, y = Media_VotoCrit, color = "Media Voto Critica"), size = 1) +
+  geom_point(aes(x = AnnoPubblicazione, y = Media_VotoCrit), size = 1) +
+  labs(title = "OmegaForce",
+    x = "Anno",
+    y = "Valore",
+    color = "Legenda") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),legend.position = "none")
+
+grafico_Capcom <- ggplot(subset(produzione_ACT, produzione_ACT$Sviluppatore == "Capcom")) +
+  geom_line(aes(x = AnnoPubblicazione, y = Numero_Giochi, color = "Numero di Giochi"), size = 1) +
+  geom_line(aes(x = AnnoPubblicazione, y = Media_VotoPlayer, color = "Media Voto Giocatori"), size = 1) +
+  geom_point(aes(x = AnnoPubblicazione, y = Media_VotoPlayer), size = 1) +
+  geom_line(aes(x = AnnoPubblicazione, y = Media_VotoCrit, color = "Media Voto Critica"), size = 1) +
+  geom_point(aes(x = AnnoPubblicazione, y = Media_VotoCrit), size = 1) +
+  labs(title = "Capcom",
+    x = "Anno",
+    y = "",
+    color = "Legenda") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),legend.position = "none")
+
+grafico_NamCo <- ggplot(subset(produzione_ACT, produzione_ACT$Sviluppatore == "Namco")) +
+  geom_line(aes(x = AnnoPubblicazione, y = Numero_Giochi, color = "Numero di Giochi"), size = 1) +
+  geom_line(aes(x = AnnoPubblicazione, y = Media_VotoPlayer, color = "Media Voto Giocatori"), size = 1) +
+  geom_point(aes(x = AnnoPubblicazione, y = Media_VotoPlayer), size = 1) +
+  geom_line(aes(x = AnnoPubblicazione, y = Media_VotoCrit, color = "Media Voto Critica"), size = 1) +
+  geom_point(aes(x = AnnoPubblicazione, y = Media_VotoCrit), size = 1) +
+  labs(
+    x = "Anno",
+    y = "Valore",
+    color = "Legenda") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),legend.position = "none")
+
+grafico_Nintendo <- ggplot(subset(produzione_ACT, produzione_ACT$Sviluppatore == "Nintendo")) +
+  geom_line(aes(x = AnnoPubblicazione, y = Numero_Giochi, color = "Numero di Giochi"), size = 1) +
+  geom_line(aes(x = AnnoPubblicazione, y = Media_VotoPlayer, color = "Media Voto Giocatori"), size = 1) +
+  geom_point(aes(x = AnnoPubblicazione, y = Media_VotoPlayer), size = 1) +
+  geom_line(aes(x = AnnoPubblicazione, y = Media_VotoCrit, color = "Media Voto Critica"), size = 1) +
+  geom_point(aes(x = AnnoPubblicazione, y = Media_VotoCrit), size = 1) +
+  labs(
+    x = "Anno",
+    y = "Valore",
+    color = "Legenda") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),legend.title = element_blank())
+
+grafico_Telltale <- ggplot(subset(produzione_ACT, produzione_ACT$Sviluppatore == "TelltaleGames")) +
+  geom_line(aes(x = AnnoPubblicazione, y = Numero_Giochi, color = "Numero di Giochi"), size = 1) +
+  geom_line(aes(x = AnnoPubblicazione, y = Media_VotoPlayer, color = "Media Voto Giocatori"), size = 1) +
+  geom_point(aes(x = AnnoPubblicazione, y = Media_VotoPlayer), size = 1) +
+  geom_line(aes(x = AnnoPubblicazione, y = Media_VotoCrit, color = "Media Voto Critica"), size = 1) +
+  geom_point(aes(x = AnnoPubblicazione, y = Media_VotoCrit), size = 1) +
+  labs(
+    x = "Anno",
+    y = "Valore",
+    color = "Legenda") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),legend.position = "none")
+
+grafico_Rebellion <- ggplot(subset(produzione_ACT, produzione_ACT$Sviluppatore == "Rebellion")) +
+  geom_line(aes(x = AnnoPubblicazione, y = Numero_Giochi, color = "Numero di Giochi"), size = 1) +
+  geom_line(aes(x = AnnoPubblicazione, y = Media_VotoPlayer, color = "Media Voto Giocatori"), size = 1) +
+  geom_point(aes(x = AnnoPubblicazione, y = Media_VotoPlayer), size = 1) +
+  geom_line(aes(x = AnnoPubblicazione, y = Media_VotoCrit, color = "Media Voto Critica"), size = 1) +
+  geom_point(aes(x = AnnoPubblicazione, y = Media_VotoCrit), size = 1) +
+  labs(
+    x = "Anno",
+    y = "Valore",
+    color = "Legenda") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),legend.position = "none")
+
+
+grid.arrange(grafico_Ubisoft, grafico_ElectronicArts, grafico_OmegaForce, grafico_Capcom, ncol = 2)
+#grid.arrange(grafico_Namco, grafico_Nintendo, grafico_Telltale, grafico_Rebelion, ncol = 2)
+```
+
+
+## Action-RPG
+```{r echo=FALSE}
+
+produzione_ACRPG <- produzione%>%
+  filter(genre_1 == "Action RPG" | genre_2 == "Action RPG" | genre_3 == "Action RPG" | genre_4 == "Action RPG")
+
+produzione_ACRPG <- produzione_ACRPG %>%
+  mutate(Sviluppatore = coalesce(Sviluppatore_1, Sviluppatore_2)) %>%
+  select(-Sviluppatore_1, -Sviluppatore_2)
+
+produzione_ACRPG$PuntGiocatore[produzione_ACRPG$PuntGiocatore == "tbd"] <- NA
+produzione_ACRPG$PuntGiocatore <- as.numeric(produzione_ACRPG$PuntGiocatore)
+produzione_ACRPG$PuntGiocatore <- produzione_ACRPG$PuntGiocatore * 10
+
+count_produzione_ACRPG <- produzione_ACRPG %>%
+  group_by(Sviluppatore, AnnoPubblicazione) %>%
+  summarise(Numero_Giochi = n()) %>%
+  na.omit()
+
+critp_produzione_ACRPG <- produzione_ACRPG %>%
+  group_by(Sviluppatore, AnnoPubblicazione) %>%
+  summarise(Media_VotoPlayer = mean(PuntGiocatore, na.rm = TRUE)) %>%
+  na.omit()
+
+crit_produzione_ACRPG <- produzione_ACRPG %>%
+  group_by(Sviluppatore, AnnoPubblicazione) %>%
+  summarise(Media_VotoCrit = mean(PuntMetacritic, na.rm = TRUE)) %>%
+  na.omit()
+
+produzione_ACRPG <- left_join(count_produzione_ACRPG, critp_produzione_ACRPG)
+produzione_ACRPG <- left_join(produzione_ACRPG, crit_produzione_ACRPG)
+
+grafico_BioWare <- ggplot(subset(produzione_ACRPG, produzione_ACRPG$Sviluppatore == "BioWare")) +
+  geom_line(aes(x = AnnoPubblicazione, y = Numero_Giochi, color = "Numero di Giochi"), size = 1) +
+  geom_line(aes(x = AnnoPubblicazione, y = Media_VotoPlayer, color = "Media Voto Giocatori"), size = 1) +
+  geom_point(aes(x = AnnoPubblicazione, y = Media_VotoPlayer), size = 1) +
+  geom_line(aes(x = AnnoPubblicazione, y = Media_VotoCrit, color = "Media Voto Critica"), size = 1) +
+  geom_point(aes(x = AnnoPubblicazione, y = Media_VotoCrit), size = 1) +
+  labs(title = "BioWare",
+    x = "",
+    y = "Valore",
+    color = "Legenda") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),legend.position = "none")
+
+grafico_Capcom <- ggplot(subset(produzione_ACRPG, produzione_ACRPG$Sviluppatore == "Capcom")) +
+  geom_line(aes(x = AnnoPubblicazione, y = Numero_Giochi, color = "Numero di Giochi"), size = 1) +
+  geom_line(aes(x = AnnoPubblicazione, y = Media_VotoPlayer, color = "Media Voto Giocatori"), size = 1) +
+  geom_point(aes(x = AnnoPubblicazione, y = Media_VotoPlayer), size = 1) +
+  geom_line(aes(x = AnnoPubblicazione, y = Media_VotoCrit, color = "Media Voto Critica"), size = 1) +
+  geom_point(aes(x = AnnoPubblicazione, y = Media_VotoCrit), size = 1) +
+  labs(title = "Capcom",
+    x = "",
+    y = "",
+    color = "Legenda") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),legend.position = "none")
+
+grafico_SquareEnix <- ggplot(subset(produzione_ACRPG, produzione_ACRPG$Sviluppatore == "SquareEnix")) +
+  geom_line(aes(x = AnnoPubblicazione, y = Numero_Giochi, color = "Numero di Giochi"), size = 1) +
+  geom_line(aes(x = AnnoPubblicazione, y = Media_VotoPlayer, color = "Media Voto Giocatori"), size = 1) +
+  geom_point(aes(x = AnnoPubblicazione, y = Media_VotoPlayer), size = 1) +
+  geom_line(aes(x = AnnoPubblicazione, y = Media_VotoCrit, color = "Media Voto Critica"), size = 1) +
+  geom_point(aes(x = AnnoPubblicazione, y = Media_VotoCrit), size = 1) +
+  labs(
+    x = "Anno",
+    y = "Valore",
+    color = "Legenda") +
+  theme(legend.title = element_blank())
+
+grafico_FromSoftware <- ggplot(subset(produzione_ACRPG, produzione_ACRPG$Sviluppatore == "FromSoftware")) +
+  geom_line(aes(x = AnnoPubblicazione, y = Numero_Giochi, color = "Numero di Giochi"), size = 1) +
+  geom_line(aes(x = AnnoPubblicazione, y = Media_VotoPlayer, color = "Media Voto Giocatori"), size = 1) +
+  geom_point(aes(x = AnnoPubblicazione, y = Media_VotoPlayer), size = 1) +
+  geom_line(aes(x = AnnoPubblicazione, y = Media_VotoCrit, color = "Media Voto Critica"), size = 1) +
+  geom_point(aes(x = AnnoPubblicazione, y = Media_VotoCrit), size = 1) +
+  labs(title = "FromSoftware",
+    x = "Anno",
+    y = "",
+    color = "Legenda") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),legend.position = "none")
+
+grafico_Falcom <- ggplot(subset(produzione_ACRPG, produzione_ACRPG$Sviluppatore == "Falcom")) +
+  geom_line(aes(x = AnnoPubblicazione, y = Numero_Giochi, color = "Numero di Giochi"), size = 1) +
+  geom_line(aes(x = AnnoPubblicazione, y = Media_VotoPlayer, color = "Media Voto Giocatori"), size = 1) +
+  geom_point(aes(x = AnnoPubblicazione, y = Media_VotoPlayer), size = 1) +
+  geom_line(aes(x = AnnoPubblicazione, y = Media_VotoCrit, color = "Media Voto Critica"), size = 1) +
+  geom_point(aes(x = AnnoPubblicazione, y = Media_VotoCrit), size = 1) +
+  labs(
+    x = "Anno",
+    y = "Valore",
+    color = "Legenda") +
+  theme(legend.title = element_blank())
+
+grafico_BandaiNamcoGames <- ggplot(subset(produzione_ACRPG, produzione_ACRPG$Sviluppatore == "BandaiNamcoGames")) +
+  geom_line(aes(x = AnnoPubblicazione, y = Numero_Giochi, color = "Numero di Giochi"), size = 1) +
+  geom_line(aes(x = AnnoPubblicazione, y = Media_VotoPlayer, color = "Media Voto Giocatori"), size = 1) +
+  geom_point(aes(x = AnnoPubblicazione, y = Media_VotoPlayer), size = 1) +
+  geom_line(aes(x = AnnoPubblicazione, y = Media_VotoCrit, color = "Media Voto Critica"), size = 1) +
+  geom_point(aes(x = AnnoPubblicazione, y = Media_VotoCrit), size = 1) +
+  labs(
+    x = "Anno",
+    y = "Valore",
+    color = "Legenda") +
+  theme(legend.title = element_blank())
+
+grafico_CDProjektRedStudio <- ggplot(subset(produzione_ACRPG, produzione_ACRPG$Sviluppatore == "CDProjektRedStudio")) +
+  geom_line(aes(x = AnnoPubblicazione, y = Numero_Giochi, color = "Numero di Giochi"), size = 1) +
+  geom_line(aes(x = AnnoPubblicazione, y = Media_VotoPlayer, color = "Media Voto Giocatori"), size = 1) +
+  geom_point(aes(x = AnnoPubblicazione, y = Media_VotoPlayer), size = 1) +
+  geom_line(aes(x = AnnoPubblicazione, y = Media_VotoCrit, color = "Media Voto Critica"), size = 1) +
+  geom_point(aes(x = AnnoPubblicazione, y = Media_VotoCrit), size = 1) +
+  labs(
+    x = "Anno",
+    y = "Valore",
+    color = "Legenda") +
+  theme(legend.title = element_blank())
+
+grafico_BlizzardEntertainment <- ggplot(subset(produzione_ACRPG, produzione_ACRPG$Sviluppatore == "BlizzardEntertainment")) +
+  geom_line(aes(x = AnnoPubblicazione, y = Numero_Giochi, color = "Numero di Giochi"), size = 1) +
+  geom_line(aes(x = AnnoPubblicazione, y = Media_VotoPlayer, color = "Media Voto Giocatori"), size = 1) +
+  geom_point(aes(x = AnnoPubblicazione, y = Media_VotoPlayer), size = 1) +
+  geom_line(aes(x = AnnoPubblicazione, y = Media_VotoCrit, color = "Media Voto Critica"), size = 1) +
+  geom_point(aes(x = AnnoPubblicazione, y = Media_VotoCrit), size = 1) +
+  labs(title = "Blizzard Entertainment",
+    x = "Anno",
+    y = "Valore",
+    color = "Legenda") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),legend.position = "none")
+
+
+#grid.arrange(grafico_BioWare, grafico_Capcom, grafico_SquareEnix, grafico_FromSoftware, ncol = 2)
+#grid.arrange(grafico_Falcom, grafico_BandaiNamcoGames, grafico_CDProjektRedStudio, grafico_BlizzardEntertainment, ncol = 2)
+grid.arrange(grafico_BioWare,grafico_Capcom, grafico_BlizzardEntertainment, grafico_FromSoftware, ncol = 2)
+```
+
+## Action-Adventure
+```{r echo=FALSE}
+
+produzione_ACAD <- produzione%>%
+  filter(genre_1 == "Action Adventure" | genre_2 == "Action Adventure" | genre_3 == "Action Adventure" | genre_4 == "Action Adventure")
+
+produzione_ACAD <- produzione_ACAD %>%
+  mutate(Sviluppatore = coalesce(Sviluppatore_1, Sviluppatore_2)) %>%
+  select(-Sviluppatore_1, -Sviluppatore_2)
+
+produzione_ACAD$PuntGiocatore[produzione_ACAD$PuntGiocatore == "tbd"] <- NA
+produzione_ACAD$PuntGiocatore <- as.numeric(produzione_ACAD$PuntGiocatore)
+produzione_ACAD$PuntGiocatore <- produzione_ACAD$PuntGiocatore * 10
+
+count_produzione_ACAD <- produzione_ACAD %>%
+  group_by(Sviluppatore, AnnoPubblicazione) %>%
+  summarise(Numero_Giochi = n()) %>%
+  na.omit()
+
+critp_produzione_ACAD <- produzione_ACAD %>%
+  group_by(Sviluppatore, AnnoPubblicazione) %>%
+  summarise(Media_VotoPlayer = mean(PuntGiocatore, na.rm = TRUE)) %>%
+  na.omit()
+
+crit_produzione_ACAD <- produzione_ACAD %>%
+  group_by(Sviluppatore, AnnoPubblicazione) %>%
+  summarise(Media_VotoCrit = mean(PuntMetacritic, na.rm = TRUE)) %>%
+  na.omit()
+
+produzione_ACAD <- left_join(count_produzione_ACAD, critp_produzione_ACAD)
+produzione_ACAD <- left_join(produzione_ACAD, crit_produzione_ACAD)
+
+grafico_Ubisoft2 <- ggplot(subset(produzione_ACAD, produzione_ACAD$Sviluppatore == "Ubisoft")) +
+  geom_line(aes(x = AnnoPubblicazione, y = Numero_Giochi, color = "Numero di Giochi"), size = 1) +
+  geom_line(aes(x = AnnoPubblicazione, y = Media_VotoPlayer, color = "Media Voto Giocatori"), size = 1) +
+  geom_point(aes(x = AnnoPubblicazione, y = Media_VotoPlayer), size = 1) +
+  geom_line(aes(x = AnnoPubblicazione, y = Media_VotoCrit, color = "Media Voto Critica"), size = 1) +
+  geom_point(aes(x = AnnoPubblicazione, y = Media_VotoCrit), size = 1) +
+  labs(title = "Ubisoft",
+    x = "",
+    y = "Valore",
+    color = "Legenda") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),legend.position = "none")
+
+grafico_Capcom2 <- ggplot(subset(produzione_ACAD, produzione_ACAD$Sviluppatore == "Capcom")) +
+  geom_line(aes(x = AnnoPubblicazione, y = Numero_Giochi, color = "Numero di Giochi"), size = 1) +
+  geom_line(aes(x = AnnoPubblicazione, y = Media_VotoPlayer, color = "Media Voto Giocatori"), size = 1) +
+  geom_point(aes(x = AnnoPubblicazione, y = Media_VotoPlayer), size = 1) +
+  geom_line(aes(x = AnnoPubblicazione, y = Media_VotoCrit, color = "Media Voto Critica"), size = 1) +
+  geom_point(aes(x = AnnoPubblicazione, y = Media_VotoCrit), size = 1) +
+  labs(
+    x = "Anno",
+    y = "Valore",
+    color = "Legenda") +
+  theme(legend.title = element_blank())
+
+grafico_TravellersTales <- ggplot(subset(produzione_ACAD, produzione_ACAD$Sviluppatore == "Traveller'sTales")) +
+  geom_line(aes(x = AnnoPubblicazione, y = Numero_Giochi, color = "Numero di Giochi"), size = 1) +
+  geom_line(aes(x = AnnoPubblicazione, y = Media_VotoPlayer, color = "Media Voto Giocatori"), size = 1) +
+  geom_point(aes(x = AnnoPubblicazione, y = Media_VotoPlayer), size = 1) +
+  geom_line(aes(x = AnnoPubblicazione, y = Media_VotoCrit, color = "Media Voto Critica"), size = 1) +
+  geom_point(aes(x = AnnoPubblicazione, y = Media_VotoCrit), size = 1) +
+  labs(
+    x = "Anno",
+    y = "Valore",
+    color = "Legenda") +
+  theme(legend.title = element_blank())
+
+grafico_TTGames <- ggplot(subset(produzione_ACAD, produzione_ACAD$Sviluppatore == "TTGames")) +
+  geom_line(aes(x = AnnoPubblicazione, y = Numero_Giochi, color = "Numero di Giochi"), size = 1) +
+  geom_line(aes(x = AnnoPubblicazione, y = Media_VotoPlayer, color = "Media Voto Giocatori"), size = 1) +
+  geom_point(aes(x = AnnoPubblicazione, y = Media_VotoPlayer), size = 1) +
+  geom_line(aes(x = AnnoPubblicazione, y = Media_VotoCrit, color = "Media Voto Critica"), size = 1) +
+  geom_point(aes(x = AnnoPubblicazione, y = Media_VotoCrit), size = 1) +
+  labs(
+    x = "Anno",
+    y = "Valore",
+    color = "Legenda") +
+  theme(legend.title = element_blank())
+
+grafico_RockstarGames <- ggplot(subset(produzione_ACAD, produzione_ACAD$Sviluppatore == "RockstarGames")) +
+  geom_line(aes(x = AnnoPubblicazione, y = Numero_Giochi, color = "Numero di Giochi"), size = 1) +
+  geom_line(aes(x = AnnoPubblicazione, y = Media_VotoPlayer, color = "Media Voto Giocatori"), size = 1) +
+  geom_point(aes(x = AnnoPubblicazione, y = Media_VotoPlayer), size = 1) +
+  geom_line(aes(x = AnnoPubblicazione, y = Media_VotoCrit, color = "Media Voto Critica"), size = 1) +
+  geom_point(aes(x = AnnoPubblicazione, y = Media_VotoCrit), size = 1) +
+  labs(title = "Rockstar Games",
+    x = "Anno",
+    y = "Valore",
+    color = "Legenda") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),legend.position = "none")
+
+grafico_ElectronicArts2 <- ggplot(subset(produzione_ACAD, produzione_ACAD$Sviluppatore == "ElectronicArts")) +
+  geom_line(aes(x = AnnoPubblicazione, y = Numero_Giochi, color = "Numero di Giochi"), size = 1) +
+  geom_line(aes(x = AnnoPubblicazione, y = Media_VotoPlayer, color = "Media Voto Giocatori"), size = 1) +
+  geom_point(aes(x = AnnoPubblicazione, y = Media_VotoPlayer), size = 1) +
+  geom_line(aes(x = AnnoPubblicazione, y = Media_VotoCrit, color = "Media Voto Critica"), size = 1) +
+  geom_point(aes(x = AnnoPubblicazione, y = Media_VotoCrit), size = 1) +
+  labs(title = "Electronic Arts",
+    x = "",
+    y = "",
+    color = "Legenda") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),legend.title = element_blank(), legend.position = "top-center")
+
+grafico_DONTNODEntertainment <- ggplot(subset(produzione_ACAD, produzione_ACAD$Sviluppatore == "DONTNODEntertainment")) +
+  geom_line(aes(x = AnnoPubblicazione, y = Numero_Giochi, color = "Numero di Giochi"), size = 1) +
+  geom_line(aes(x = AnnoPubblicazione, y = Media_VotoPlayer, color = "Media Voto Giocatori"), size = 1) +
+  geom_point(aes(x = AnnoPubblicazione, y = Media_VotoPlayer), size = 1) +
+  geom_line(aes(x = AnnoPubblicazione, y = Media_VotoCrit, color = "Media Voto Critica"), size = 1) +
+  geom_point(aes(x = AnnoPubblicazione, y = Media_VotoCrit), size = 1) +
+  labs(
+    x = "Anno",
+    y = "Valore",
+    color = "Legenda") +
+  theme(legend.position = "bottom", legend.box = "horizontal", plot.background = element_rect(fill = "transparent"))
+
+legend_ADV <- ggplot(subset(produzione_ACAD, produzione_ACAD$Sviluppatore == "DONTNODEntertainment")) +
+  geom_line() +
+  theme(legend.position = "bottom", legend.box = "horizontal", plot.background = element_rect(fill = "transparent"))
+
+legend_ADV <- legend_ADV + guides(color = guide_legend(title = "legenda"))
+
+grafico_IoInteractive <- ggplot(subset(produzione_ACAD, produzione_ACAD$Sviluppatore == "IoInteractive")) +
+  geom_line(aes(x = AnnoPubblicazione, y = Numero_Giochi, color = "Numero di Giochi"), size = 1) +
+  geom_line(aes(x = AnnoPubblicazione, y = Media_VotoPlayer, color = "Media Voto Giocatori"), size = 1) +
+  geom_point(aes(x = AnnoPubblicazione, y = Media_VotoPlayer), size = 1) +
+  geom_line(aes(x = AnnoPubblicazione, y = Media_VotoCrit, color = "Media Voto Critica"), size = 1) +
+  geom_point(aes(x = AnnoPubblicazione, y = Media_VotoCrit), size = 1) +
+  labs(title = "IOInteractive",
+    x = "Anno",
+    y = "",
+    color = "Legenda") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),legend.position = "none")
+
+
+
+#grid.arrange(grafico_Ubisoft2, grafico_Capcom2, grafico_TravellersTales, grafico_TTGames, ncol = 2)
+#grid.arrange(grafico_RockstarGames, grafico_ElectronicArts, grafico_DONTNODEntertainment, grafico_IoInteractive, ncol = 2)
+grid.arrange(grafico_Ubisoft2, grafico_ElectronicArts2, grafico_RockstarGames, grafico_IoInteractive, ncol = 2)
+```
+
+# Analisi delle piattaforme
+
+## Genere Action
+Quale è la piattaforma su cui si gioca di più?
+
+
+```{r echo=FALSE}
+
+dati_cumulativi_ACT <- VGList %>%
+  filter(genre_1 == "Action" | genre_2 == "Action" | genre_3 == "Action" | genre_4 == "Action") %>%
+  group_by(AnnoPubblicazione, Piattaforma) %>%
+  summarize(QuantitaAnnuale = n()) %>%
+  arrange(AnnoPubblicazione, Piattaforma)
+
+dati_cumulativi_ACT <- dati_cumulativi_ACT %>% arrange(AnnoPubblicazione, Piattaforma)
+
+# Calcola le quantità cumulative
+dati_cumulativi_ACT <- dati_cumulativi_ACT %>% group_by(Piattaforma) %>%
+  mutate(QuantitaCumulata = cumsum(QuantitaAnnuale))
+
+dati_cumulativi_ACT <- dati_cumulativi_ACT %>%
+  filter(Piattaforma %in% c("PC", "DS", "3DS", "GameBoyAdvance", "PlayStation", "PlayStation2", "PlayStation3", "PlayStation4","Switch", "Wii",
+                            "WiiU", "Xbox", "Xbox360", "XboxOne"))
+
+gr_piattaforme_ACT <- ggplot(dati_cumulativi_ACT, aes(x = AnnoPubblicazione, y = QuantitaCumulata, group = Piattaforma, color = Piattaforma)) +
+  geom_line() +
+  scale_color_manual(values = c("PC" = "black", 
+                                "DS" = "red", "3DS" = "orange", "GameBoyAdvance" = "orange3", "Switch" = "#FFCC00", "Wii" = "yellow2", "WiiU" = "yellow3", 
+                                "PlayStation" = "steelblue", "PlayStation2" = "darkblue", "PlayStation3" = "darkgrey", "PlayStation4" = "blue",
+                                "Xbox" = "#009933", "Xbox360" = "#99FF00", "XboxOne" = "green")) +
+  labs(x = "Anno di Pubblicazione", y = "Quantità Cumulativa", color = "Piattaforma") +
+  theme_minimal()
+
+  
+print(gr_piattaforme_ACT)
+```
+
+Genere action più portato per la PlyStation, si nota un calo dal passaggio da Xbox360 a XboxOne.
+
+
+ 
+## Action RPG
+```{r echo=FALSE}
+
+dati_cumulativi_ACRPG <- VGList %>%
+  filter(genre_1 == "Action RPG" | genre_2 == "Action RPG" | genre_3 == "Action RPG" | genre_4 == "Action RPG") %>%
+  group_by(AnnoPubblicazione, Piattaforma) %>%
+  summarize(QuantitaAnnuale = n()) %>%
+  arrange(AnnoPubblicazione, Piattaforma)
+
+dati_cumulativi_ACRPG <- dati_cumulativi_ACRPG %>%
+  filter(AnnoPubblicazione <= 2020)
+
+dati_cumulativi_ACRPG <- dati_cumulativi_ACRPG %>% arrange(AnnoPubblicazione, Piattaforma)
+
+# Calcola le quantità cumulative
+dati_cumulativi_ACRPG <- dati_cumulativi_ACRPG %>% group_by(Piattaforma) %>%
+  mutate(QuantitaCumulata = cumsum(QuantitaAnnuale))
+
+dati_cumulativi_ACRPG <- dati_cumulativi_ACRPG %>%
+  filter(Piattaforma %in% c("PC", "DS", "3DS", "GameBoyAdvance", "PlayStation", "PlayStation2", "PlayStation3", "PlayStation4", "Switch", "Wii",
+                            "WiiU", "Xbox", "Xbox360", "XboxOne"))
+
+gr_piattaforme_ACRPG <- ggplot(dati_cumulativi_ACRPG, aes(x = AnnoPubblicazione, y = QuantitaCumulata, group = Piattaforma, color = Piattaforma)) +
+  geom_line() +
+  scale_color_manual(values = c("PC" = "black", 
+                                "DS" = "red", "3DS" = "orange", "GameBoyAdvance" = "orange3", "Switch" = "#FFCC00", "Wii" = "yellow2", "WiiU" = "yellow3", 
+                                "PlayStation" = "steelblue", "PlayStation2" = "darkblue", "PlayStation3" = "darkgrey", "PlayStation4" = "blue",
+                                "Xbox" = "#009933", "Xbox360" = "#99FF00", "XboxOne" = "green")) +
+  labs(x = "Anno di Pubblicazione", y = "Quantità Cumulativa", color = "Piattaforma") +
+  theme_minimal()
+
+  
+print(gr_piattaforme_ACRPG)
+```
+
+La PlayStation3 segue la Xbox360 da vicino, ma col cambio di generazione a PlayStation4 - XboxOne la Microsoft non regge il confronto.
+
+
+## Action Adventure
+```{r echo=FALSE}
+
+dati_cumulativi_ACADV <- VGList %>%
+  filter(genre_1 == "Action Adventure" | genre_2 == "Action Adventure" | genre_3 == "Action Adventure" | genre_4 == "Action Adventure") %>%
+  group_by(AnnoPubblicazione, Piattaforma) %>%
+  summarize(QuantitaAnnuale = n()) %>%
+  arrange(AnnoPubblicazione, Piattaforma)
+
+dati_cumulativi_ACADV <- dati_cumulativi_ACADV %>%
+  filter(AnnoPubblicazione <= 2020)
+
+dati_cumulativi_ACADV <- dati_cumulativi_ACADV %>% arrange(AnnoPubblicazione, Piattaforma)
+
+# Calcola le quantità cumulative
+dati_cumulativi_ACADV <- dati_cumulativi_ACADV %>% group_by(Piattaforma) %>%
+  mutate(QuantitaCumulata = cumsum(QuantitaAnnuale))
+
+dati_cumulativi_ACADV <- dati_cumulativi_ACADV %>%
+  filter(Piattaforma %in% c("PC", "DS", "3DS", "GameBoyAdvance", "PlayStation", "PlayStation2", "PlayStation3", "PlayStation4", "Switch", "Wii",
+                            "WiiU", "Xbox", "Xbox360", "XboxOne"))
+
+gr_piattaforme_ACADV <- ggplot(dati_cumulativi_ACADV, aes(x = AnnoPubblicazione, y = QuantitaCumulata, group = Piattaforma, color = Piattaforma)) +
+  geom_line() +
+  scale_color_manual(values = c("PC" = "black", 
+                                "DS" = "red", "3DS" = "orange", "GameBoyAdvance" = "orange3", "Switch" = "#FFCC00", "Wii" = "yellow2", "WiiU" = "yellow3", 
+                                "PlayStation" = "steelblue", "PlayStation2" = "darkblue", "PlayStation3" = "darkgrey", "PlayStation4" = "blue",
+                                "Xbox" = "#009933", "Xbox360" = "#99FF00", "XboxOne" = "green")) +
+  labs(x = "Anno di Pubblicazione", y = "Quantità Cumulativa", color = "Piattaforma") +
+  theme_minimal()
+
+  
+print(gr_piattaforme_ACADV)
+```
+
+Come per gli Action Adventure, la generazione Play3 - Xbox360 vanno di pari passo, ma stavolta la XboxOne regge meglio il confronto con la PlayStation4
+
+
+# Conclusioni
+
+##
+>- La Ubisoft domina la produzione in 2 generi su 3, EA e Capcom comunque presenti in più generi. Il genere Action-RPG ha un numero di titoli inferiore agli altri due generi.
+
+>- Si nota come generalmente la critica sia più propensa a valutazioni più alte rispetto a quelle dei giocatori; questo però non sempre vale e come nel caso della Capcom per il genere Action-RPG.
+
+>- Si può notare come il proseguimento con nuovi titoli di serie storiche di successo non sempre significa che i nuovi titoli siano apprezzati. Stessa storia vale per la maggior parte dei DLC rilasciati.
+
+>- L'interesse per i generi Action è aumentato nel tempo come in generale l'interesse per il mondo videoludico. Si osserva anche l'ormai storica rivalità tra Microsoft e Sony che col passare del tempo sta volgendo a favore di quest'ultima. Interessante è anche il fatto che col passare del tempo si è cercato di aumentare il numero di giochi piattaforma.
+
+
+## FINE
