@@ -1,0 +1,670 @@
+---
+title: "Creazione_Dataset"
+author: "Giovanni Bertoli"
+date: "2023-09-06"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+
+library(readr)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(tidyverse)
+library(gridExtra)
+library(data.table)
+library(stringr)
+library(maps)
+library(RColorBrewer)
+```
+
+
+## Importazione e sistemazione
+
+```{r}
+#importare il dataset della mia lista di videogamesaggiornata al November 10th, 2020
+VGList2 <- read.csv(file="C:/Users/Giovanni/Desktop/Giovanni/Università/DataScience2023/games-data2.csv") %>% 
+  separate(genre,c("genre_1","genre_2", "genre_3", "genre_4"),sep=",") %>% 
+  separate(developer,c("Sviluppatore_1","Sviluppatore_2", "Sviluppatore_3", "Sviluppatore_4"),sep=",") %>%
+  separate(r.date,c("data","anno"),sep=",")
+
+#eliminiamo colonne che non ci servono
+VGList2 <- subset(VGList2, select = -c(data, players, Sviluppatore_3, Sviluppatore_4))
+
+#rinomino per rendere più facile
+setnames(VGList2, old = c('name','platform','anno', 'score', 'user.score', 'critics', 'users'), 
+         new = c('Gioco','Piattaforma','AnnoPubblicazione', 'PuntMetacritic', 'PuntGiocatore', 'NumGiudiciCritici', 'NumGiudiciGiocatori'))
+
+#correggere linee
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "RockstarLeeds"] <- "RockstarGames"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "RockstarLondon"] <- "RockstarGames"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "RockstarNorth"] <- "RockstarGames"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "RockstarSanDiego"] <- "RockstarGames"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "RockstarStudios"] <- "RockstarGames"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "RockstarToronto"] <- "RockstarGames"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "RockstarVancouver"] <- "RockstarGames"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "RockstarVienna"] <- "RockstarGames"
+
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "RockstarLeeds"] <- "RockstarGames"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "RockstarLondon"] <- "RockstarGames"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "RockstarNorth"] <- "RockstarGames"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "RockstarSanDiego"] <- "RockstarGames"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "RockstarStudios"] <- "RockstarGames"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "RockstarToronto"] <- "RockstarGames"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "RockstarVancouver"] <- "RockstarGames"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "RockstarVienna"] <- "RockstarGames"
+
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "2KAustralia"] <- "2KGames"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "2KCzech"] <- "2KGames"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "2KMarin"] <- "2KGames"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "2KShanghai"] <- "2KGames"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "2KSports"] <- "2KGames"
+
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "2KAustralia"] <- "2KGames"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "2KCzech"] <- "2KGames"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "2KMarin"] <- "2KGames"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "2KShanghai"] <- "2KGames"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "2KSports"] <- "2KGames"
+
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "AcclaimStudiosAustin"] <- "AcclaimStudios"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "AcclaimStudiosCheltenham"] <- "AcclaimStudios"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "AcclaimStudiosManchester"] <- "AcclaimStudios"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "AcclaimStudiosSaltLakeCity"] <- "AcclaimStudios"
+
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "AcclaimStudiosAustin"] <- "AcclaimStudios"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "AcclaimStudiosCheltenham"] <- "AcclaimStudios"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "AcclaimStudiosManchester"] <- "AcclaimStudios"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "AcclaimStudiosSaltLakeCity"] <- "AcclaimStudios"
+
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "Ankama"] <- "AnkamaGames"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "Ankama"] <- "AnkamaGames"
+
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "AtlusCo"] <- "Atlus"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "AtlusCo"] <- "Atlus"
+
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "AvalancheSoftware"] <- "AvalancheStudios"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "AvalancheSoftware"] <- "AvalancheStudios"
+
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "BethesdaSoftworks"] <- "BethesdaGameStudios"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "BethesdaSoftworks"] <- "BethesdaGameStudios"
+
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "BlitzGames"] <- "BlitzGamesStudios"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "BlitzGames"] <- "BlitzGamesStudios"
+
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "BlizzardNorth"] <- "BlizzardEntertainment"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "BlizzardNorth"] <- "BlizzardEntertainment"
+
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "CapcomR&DDivision1"] <- "Capcom"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "CapcomVancouver"] <- "Capcom"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "CapcomR&DDivision1"] <- "Capcom"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "CapcomVancouver"] <- "Capcom"
+
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "ClimaxGroup"] <- "ClimaxStudios"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "ClimaxGroup"] <- "ClimaxStudios"
+
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "DisneyInteractive"] <- "DisneyInteractiveStudios"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "DisneyInteractive"] <- "DisneyInteractiveStudios"
+
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "EABlackBox"] <- "ElectronicArts"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "EABlackBox"] <- "ElectronicArts"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "EABrightLight"] <- "ElectronicArts"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "EABrightLight"] <- "ElectronicArts"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "EACanada"] <- "ElectronicArts"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "EACanada"] <- "ElectronicArts"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "EAChicago"] <- "ElectronicArts"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "EAChicago"] <- "ElectronicArts"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "EADICE"] <- "ElectronicArts"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "EADICE"] <- "ElectronicArts"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "EAJapanStudio"] <- "ElectronicArts"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "EAJapanStudio"] <- "ElectronicArts"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "EAGames"] <- "ElectronicArts"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "EAGames"] <- "ElectronicArts"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "EAMobile"] <- "ElectronicArts"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "EAMobile"] <- "ElectronicArts"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "EAMontreal"] <- "ElectronicArts"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "EAMontreal"] <- "ElectronicArts"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "EAMythic"] <- "ElectronicArts"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "EAMythic"] <- "ElectronicArts"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "EAPacific"] <- "ElectronicArts"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "EAPacific"] <- "ElectronicArts"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "EAPhenomic"] <- "ElectronicArts"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "EAPhenomic"] <- "ElectronicArts"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "EARedwoodShores"] <- "ElectronicArts"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "EARedwoodShores"] <- "ElectronicArts"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "EASaltLake"] <- "ElectronicArts"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "EASaltLake"] <- "ElectronicArts"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "EASeattle"] <- "ElectronicArts"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "EASeattle"] <- "ElectronicArts"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "EASports"] <- "ElectronicArts"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "EASports"] <- "ElectronicArts"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "EASportsBig"] <- "ElectronicArts"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "EASportsBig"] <- "ElectronicArts"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "EATiburon"] <- "ElectronicArts"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "EATiburon"] <- "ElectronicArts"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "EAVancouver"] <- "ElectronicArts"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "EAVancouver"] <- "ElectronicArts"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "EAGames"] <- "ElectronicArts"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "EAGames"] <- "ElectronicArts"
+
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "GaijinDistribution"] <- "GaijinEntertainment"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "GaijinDistribution"] <- "GaijinEntertainment"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "GaijinGames"] <- "GaijinEntertainment"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "GaijinGames"] <- "GaijinEntertainment"
+
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "GearboxPublishing"] <- "GearboxSoftware"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "GearboxPublishing"] <- "GearboxSoftware"
+
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "Haemimont"] <- "HaemimontGames"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "Haemimont"] <- "HaemimontGames"
+
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "Koei/Inis"] <- "Koei"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "Koei/Inis"] <- "Koei"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "KoeiCanada"] <- "Koei"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "KoeiCanada"] <- "Koei"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "KoeiTecmoGames"] <- "Koei"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "KoeiTecmoGames"] <- "Koei"
+
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "KonamiComputerEntertainmentHawaii"] <- "Konami"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "KonamiComputerEntertainmentHawaii"] <- "Konami"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "KonamiComputerEntertainmentNagoya"] <- "Konami"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "KonamiComputerEntertainmentNagoya"] <- "Konami"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "KonamiComputerEntertainmentOsaka"] <- "Konami"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "KonamiComputerEntertainmentOsaka"] <- "Konami"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "KonamiSoftwareShanghai"] <- "Konami"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "KonamiSoftwareShanghai"] <- "Konami"
+
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "MarvelousAQL"] <- "Marvelous"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "MarvelousAQL"] <- "Marvelous"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "MarvelousEntertainment"] <- "Marvelous"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "MarvelousEntertainment"] <- "Marvelous"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "MarvelousFirstStudio"] <- "Marvelous"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "MarvelousFirstStudio"] <- "Marvelous"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "MarvelousInc."] <- "Marvelous"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "MarvelousInc."] <- "Marvelous"
+
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "MicrosoftGameStudiosJapan"] <- "MicrosoftGameStudios"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "MicrosoftGameStudiosJapan"] <- "MicrosoftGameStudios"
+
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "MidwayStudios-Austin"] <- "Midway"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "MidwayStudios-Austin"] <- "Midway"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "MidwayStudios-LosAngeles"] <- "Midway"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "MidwayStudios-LosAngeles"] <- "Midway"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "MidwayStudios-Newcastle"] <- "Midway"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "MidwayStudios-Newcastle"] <- "Midway"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "MidwayStudios-SanDiego"] <- "Midway"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "MidwayStudios-SanDiego"] <- "Midway"
+
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "MileStoneInc."] <- "Milestone"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "MileStoneInc."] <- "Milestone"
+
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "NamcoBandaiGames"] <- "Namco"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "NamcoBandaiGames"] <- "Namco"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "NamcoBandaiGamesAmerica"] <- "Namco"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "NamcoBandaiGamesAmerica"] <- "Namco"
+
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "NintendoEADTokyo"] <- "Nintendo"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "NintendoEADTokyo"] <- "Nintendo"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "NintendoSoftwareTechnology"] <- "Nintendo"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "NintendoSoftwareTechnology"] <- "Nintendo"
+
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "SegaAM2"] <- "Sega"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "SegaAM2"] <- "Sega"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "SegaAM3"] <- "Sega"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "SegaAM3"] <- "Sega"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "SEGARacingStudio"] <- "Sega"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "SEGARacingStudio"] <- "Sega"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "SegaSoft"] <- "Sega"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "SegaSoft"] <- "Sega"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "SegaStudiosAustralia"] <- "Sega"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "SegaStudiosAustralia"] <- "Sega"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "SegaStudiosSanFrancisco"] <- "Sega"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "SegaStudiosSanFrancisco"] <- "Sega"
+
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "SonyInteractiveEntertainment"] <- "SonyComputerEntertainment"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "SonyInteractiveEntertainment"] <- "SonyComputerEntertainment"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "SonyOnlineEntertainment"] <- "SonyComputerEntertainment"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "SonyOnlineEntertainment"] <- "SonyComputerEntertainment"
+
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "StoicJesterStudios"] <- "Stoic"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "StoicJesterStudios"] <- "Stoic"
+
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "UbisoftAnnecy"] <- "Ubisoft"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "UbisoftAnnecy"] <- "Ubisoft"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "UbisoftBlueByte"] <- "Ubisoft"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "UbisoftBlueByte"] <- "Ubisoft"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "UbisoftBulgaria"] <- "Ubisoft"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "UbisoftBulgaria"] <- "Ubisoft"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "UbisoftCasablanca"] <- "Ubisoft"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "UbisoftCasablanca"] <- "Ubisoft"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "UbisoftChengdu"] <- "Ubisoft"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "UbisoftChengdu"] <- "Ubisoft"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "UbisoftIvoryTower"] <- "Ubisoft"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "UbisoftIvoryTower"] <- "Ubisoft"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "UbisoftMilan"] <- "Ubisoft"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "UbisoftMilan"] <- "Ubisoft"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "UbisoftMontpellier"] <- "Ubisoft"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "UbisoftMontpellier"] <- "Ubisoft"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "UbisoftMontreal"] <- "Ubisoft"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "UbisoftMontreal"] <- "Ubisoft"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "UbisoftNadeo"] <- "Ubisoft"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "UbisoftNadeo"] <- "Ubisoft"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "UbisoftParis"] <- "Ubisoft"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "UbisoftParis"] <- "Ubisoft"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "UbisoftQuebec"] <- "Ubisoft"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "UbisoftQuebec"] <- "Ubisoft"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "UbisoftReflections"] <- "Ubisoft"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "UbisoftReflections"] <- "Ubisoft"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "UbisoftRomania"] <- "Ubisoft"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "UbisoftRomania"] <- "Ubisoft"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "UbisoftSanFrancisco"] <- "Ubisoft"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "UbisoftSanFrancisco"] <- "Ubisoft"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "UbisoftShanghai"] <- "Ubisoft"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "UbisoftShanghai"] <- "Ubisoft"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "UbisoftShanghai/Paris"] <- "Ubisoft"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "UbisoftShanghai/Paris"] <- "Ubisoft"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "UbisoftSingapore"] <- "Ubisoft"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "UbisoftSingapore"] <- "Ubisoft"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "UbisoftSofia"] <- "Ubisoft"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "UbisoftSofia"] <- "Ubisoft"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "UbisoftToronto"] <- "Ubisoft"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "UbisoftToronto"] <- "Ubisoft"
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "UbisoftVancouver"] <- "Ubisoft"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "UbisoftVancouver"] <- "Ubisoft"
+
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "Vanillaware"] <- "VanillaWare"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "Vanillaware"] <- "VanillaWare"
+
+VGList2["Sviluppatore_1"][VGList2["Sviluppatore_1"] == "WarnerBros."] <- "WarnerBros.InteractiveEntertainment"
+VGList2["Sviluppatore_2"][VGList2["Sviluppatore_2"] == "WarnerBros."] <- "WarnerBros.InteractiveEntertainment"
+
+VGList2[nrow(VGList2) + 1,] = c("Elden Ring","PlayStation5", "2022", "96", "7.8", "FromSoftware", NA, "Action RPG", NA, NA, NA, "92", "5161")
+VGList2[nrow(VGList2) + 1,] = c("Elden Ring","PC", "2022", "94", "7.0", "FromSoftware", NA, "Action RPG", NA, NA, NA, "63", "2137")
+VGList2[nrow(VGList2) + 1,] = c("Elden Ring","XboxSeriesX", "2022", "96", "7.7", "FromSoftware", NA, "Action RPG", NA, NA, NA, "19", "1076")
+
+VGList2[nrow(VGList2) + 1,] = c("SCARLET NEXUS","PlayStation5", "2021", "80", "7.9", "BandaiNamcoGames", NA, "Action RPG", NA, NA, NA, "71", "312")
+VGList2[nrow(VGList2) + 1,] = c("SCARLET NEXUS","XboxSeriesX", "2021", "77", "8.1", "BandaiNamcoGames", NA, "Action RPG", NA, NA, NA, "22", "38")
+VGList2[nrow(VGList2) + 1,] = c("SCARLET NEXUS","PC", "2021", "80", "7.8", "BandaiNamcoGames", NA, "Action RPG", NA, NA, NA, "26", "55")
+VGList2[nrow(VGList2) + 1,] = c("SCARLET NEXUS","PlayStation4", "2021", "80", "8.1", "BandaiNamcoGames", NA, "Action RPG", NA, NA, NA, "12", "28")
+
+VGList2[nrow(VGList2) + 1,] = c("Star Wars Jedi: Survivor","PlayStation5", "2023", "85", "6.2", "ElectronicArts", NA, "Action Adventure", NA, NA, NA, "121", "577")
+VGList2[nrow(VGList2) + 1,] = c("Star Wars Jedi: Survivor","PC", "2023", "78", "3.4", "ElectronicArts", NA, "Action Adventure", NA, NA, NA, "26", "217")
+VGList2[nrow(VGList2) + 1,] = c("Star Wars Jedi: Survivor","XboxSeriesX", "2023", "84", "3.4", "ElectronicArts", NA, "Action Adventure", NA, NA, NA, "17", "274")
+
+VGList2[nrow(VGList2) + 1,] = c("F1 22","PlayStation5", "2022", "79", "3.6", "ElectronicArts", "Codemasters", "Driving", "Simulation", "Automobile", "Formula One", "40", "52")
+VGList2[nrow(VGList2) + 1,] = c("F1 22","PC", "2022", "81", "3.9", "ElectronicArts", "Codemasters", "Driving", "Simulation", "Automobile", "Formula One", "23", "49")
+VGList2[nrow(VGList2) + 1,] = c("F1 22","XboxSeriesX", "2022", "81", "4.7", "ElectronicArts", "Codemasters", "Driving", "Simulation", "Automobile", "Formula One", "25", "17")
+
+VGList2[nrow(VGList2) + 1,] = c("FIFA 22","PlayStation5", "2021", "78", "2.7", "ElectronicArts", NA, "Sports", "Team", "Soccer", "Sim", "63", "248")
+VGList2[nrow(VGList2) + 1,] = c("FIFA 22","PC", "2021", "73", "2.0", "ElectronicArts", NA, "Sports", "Team", "Soccer", "Sim", "4", "156")
+VGList2[nrow(VGList2) + 1,] = c("FIFA 22","XboxSeriesX", "2021", "78", "2.9", "ElectronicArts", NA, "Sports", "Team", "Soccer", "Sim", "23", "55")
+
+VGList2[nrow(VGList2) + 1,] = c("FIFA 23","PlayStation5", "2022", "76", "2.3", "ElectronicArts", NA, "Sports", "Team", "Soccer", "Sim", "74", "193")
+VGList2[nrow(VGList2) + 1,] = c("FIFA 23","PC", "2022", "77", "1.8", "ElectronicArts", NA, "Sports", "Team", "Soccer", "Sim", "5", "147")
+VGList2[nrow(VGList2) + 1,] = c("FIFA 23","XboxSeriesX", "2022", "79", "2.9", "ElectronicArts", NA, "Sports", "Team", "Soccer", "Sim", "20", "46")
+
+write.csv(VGList2, file = "Videogames_List2.csv")
+
+#Update Missing Values with Empty/Blank String ----- se serve in futuro, altimenti non mettere
+#df[is.na(df)] <- ""
+```
+
+```{r}
+#importazione dataset sviluppatori
+Sviluppatori <- read.csv(file="C:/Users/Giovanni/Desktop/Giovanni/Università/DataScience2023/video-games-developers.csv") %>% 
+  separate(City,c("City","City_2"),sep=",")
+
+#rinomino per rendere più facile
+setnames(Sviluppatori, old = c('Developer', 'City', 'Country', 'Est.'), 
+         new = c('Sviluppatore', 'Città', 'Stato', 'Fondazione'))
+
+#eliminiamo le colonne colonne che non ci servono ------ eliminare 170
+Sviluppatori <- subset(Sviluppatori, select = -c(City_2, Administrative.division, Notable.games..series.or.franchises, Notes))
+
+
+#correggere linee
+
+Sviluppatori["Città"][Sviluppatori["Città"] == "KyivSliema"] <- "Kyiv"
+Sviluppatori["Stato"][Sviluppatori["Stato"] == "UkraineMalta"] <- "Ukraine"
+Sviluppatori["Fondazione"][Sviluppatori["Fondazione"] == "20052014"] <- "2005"
+
+Sviluppatori["Fondazione"][Sviluppatori["Fondazione"] == "19552012"] <- "1955"
+
+Sviluppatori["Fondazione"][Sviluppatori["Fondazione"] == ""] <- "1988"
+
+Sviluppatori["Fondazione"][Sviluppatori["Fondazione"] == "c. 1984"] <- "1984"
+
+Sviluppatori["Fondazione"][Sviluppatori["Fondazione"] == "1997 (as SCE Cambridge Studio), 2013"] <- "1997"
+
+Sviluppatori["Città"][Sviluppatori["Città"] == "Tokyo MidtownMinato"] <- "Tokyo"
+
+Sviluppatori["Sviluppatore"][Sviluppatori["Sviluppatore"] == "NexonNexon Korea"] <- "Nexon"
+Sviluppatori["Città"][Sviluppatori["Città"] == "TokyoSeoul"] <- "Tokyo"
+Sviluppatori["Stato"][Sviluppatori["Stato"] == "JapanSouth Korea"] <- "Japan"
+Sviluppatori["Fondazione"][Sviluppatori["Fondazione"] == "20021994"] <- "2002"
+
+Sviluppatori["Fondazione"][Sviluppatori["Fondazione"] == "1976 (as the Red Company), 2000 (as Red Entertainment)3"] <- "1976"
+
+Sviluppatori["Città"][Sviluppatori["Città"] == "Royal Leamington Spa"] <- "Leamington Spa"
+
+Sviluppatori["Fondazione"][Sviluppatori["Fondazione"] == "1976 (as the Red Company), 2000 (as Red Entertainment)"] <- "1976"
+
+Sviluppatori["Città"][Sviluppatori["Città"] == "New York CityBangaloreLeedsLincolnLondonBallardvaleEdinburghCarlsbadOakville"] <- "New York City"
+Sviluppatori["Fondazione"][Sviluppatori["Fondazione"] == "199820162004200220052008200220021999"] <- "1998"
+
+Sviluppatori["Fondazione"][Sviluppatori["Fondazione"] == "1993 (Founded as Blank, Berlyn and Co., later Eidetic)"] <- "1993"
+
+Sviluppatori["Stato"][Sviluppatori["Stato"] == "Japan, United States, Netherlands, United Kingdom"] <- "Japan"
+
+Sviluppatori["Fondazione"][Sviluppatori["Fondazione"] == "1989 (as Johnson Voorsanger Productions)"] <- "1989"
+
+Sviluppatori["Stato"][Sviluppatori["Stato"] == "AustriaSweden"] <- "Austria"
+
+Sviluppatori["Stato"][Sviluppatori["Stato"] == "United StatesCanada"] <- "Canada"
+
+Sviluppatori["Stato"][Sviluppatori["Stato"] == "Europe"] <- "France"
+
+Sviluppatori["Città"][Sviluppatori["Città"] == "Tokyo (SIE"] <- "Tokyo"
+
+Sviluppatori["Città"][Sviluppatori["Città"] == "ViennaKarlstad"] <- "Vienna"
+
+Sviluppatori["Città"][Sviluppatori["Città"] == "Hong Kong SAR"] <- "Hong Kong"
+
+Sviluppatori[511, 3] <- "Japan"
+
+Sviluppatori[548, 3] <- "Japan"
+
+Sviluppatori[652, 2] <- "Albany"
+
+Sviluppatori[662, 2] <- "Nicosia"
+Sviluppatori[662, 3] <- "cyprus"
+
+
+write.csv(Sviluppatori, file = "Sviluppatori.csv")
+
+
+```
+
+
+## Nuovo dataset per gli sviluppatori ricavato da VGList e Sviluppatori
+
+#Nomi Sviluppatori
+```{r}
+nomi_sviluppatori <- c("11bitstudios", "1C", "2KGames", "343Industries", "3DRealms", "4AGames", "5THCell", "989Sports", "AccessGames", "AcclaimStudios", 
+                       "ACETeam", "Acquire", "ActionFormsLtd.", "Activision", "Akella", "AlfaSystem", "AmazonGameStudios", "Ambrella", "AmusementVision", "Ancient", 
+                       "AnkamaGames", "AQInteractive", "Aquria", "ArcSystemWorks", "ArcenGames", "ArenaNet", "Arika", "ArkaneStudios", "ArkedoStudio", "ArtCo.", 
+                       "Artdink", "ArtePiazza", "ArtificialStudios", "Artoon", "Arzest", "AscaronEntertainmentGmbH", "AsoboStudio", "Atari", "Atlus", "AtomicPlanetEntertainment", 
+                       "AvalancheStudios", "BandaiNamcoGames", "B.B.Studio", "Beenox", "BehaviourInteractive", "BestWay", "BethesdaGameStudios", "BigBlueBubbleInc", "BigFinishGames", "BigHugeGames", 
+                       "BioWare", "BitsStudios", "BizarreCreations", "BlackForestGames", "BlackIsleStudios", "BlackRockStudio", "BlitzGamesStudios", "BlizzardEntertainment", "BlooberTeam", "BlueFangGames", 
+                       "Bluehole", "BluepointGames", "Blueside", "BohemiaInteractive", "BossKey", "BreakAwayGames", "BullfrogProductions", "Bungie", "CamelotSoftwarePlanning", "Capcom", 
+                       "CarbineStudios", "CattleCall", "CauldronLtd.", "Cave", "CaviaInc.", "CCP", "CDProjektRedStudio", "CertainAffinity", "ChairEntertainment", "ChunSoft", ##
+                       "Cing", "ClapHanz", "ClimaxStudios", "ClimaxEntertainment", "CloverStudio", "Codemasters", "CoffeeStainStudios", "CohortStudios", "ColossalOrder", "CompileHeart", 
+                       "CompulsionGames", "CoreDesignLtd.", "Crafts&Meister", "CrawfishInteractive", "Crea-Tech", "CreatStudios", "CreativeAssembly", "CreaturesInc.", "CriterionGames", "Croteam", 
+                       "CryoInteractive", "CrypticStudios", "CrystalDynamics", "Crytek", "CultureBrain", "CyanWorlds", "CyberConnect2", "CyberloreStudios", "Cygames", "DangerClose", 
+                       "Day1Studios", "DaybreakGames", "DeadlineGames", "Deck13", "DeepSilver", "DemiurgeStudios", "DieGuteFabrik", "DigitalEclipse", "DigitalExtremes", "DigitalReality", 
+                       "DimpsCorporation", "DisneyInteractiveStudios", "DONTNODEntertainment", "DotEmu", "DoubleFineProductions", "DovetailGames", "Dynamix", "ElectronicArts", "EdenStudios", "Egosoft", 
+                       "Eighting", "EKOSoftware", "EngineSoftware", "EpicGames", "Epics", "EtrangesLibellules", "EugenSystems", "Eurocom", "EvolutionStudios", "Examu", 
+                       "FacepunchStudios", "FarsightStudios", "FASAStudio", "FatsharkAB", "FeelPlus", "Felistella", "FiraxisGames", "FireFlyStudios", "Firesprite", "Flagship", 
+                       "Flight-Plan", "FlyingWildHog", "FocusHomeInteractive", "Foundation9Entertainment", "FrictionalGames", "Frogwares", "FromSoftware", "FrontierDevelopments", "Frozenbyte", "FUNLabs", 
+                       "Funcom", "FuRyu", "FuturemarkGamesStudio", "GaijinEntertainment", "GameArts", "GameFreak", "Gameloft", "Ganbarion", "GearboxSoftware", "GeniusSonorityInc.", 
+                       "Genki", "Good-Feel", "GranzellaInc.", "GrasshopperManufacture", "GravityCorporation", "GrayMatter", "GREZZO", "GrindingGearGames", "GriptoniteGames", "GSCGameWorld", 
+                       "GuerillaCambridge", "Guerrilla", "GunfireGames", "GungHo", "Gust", "h.a.n.d.Inc.", "HaemimontGames", "HALLabs", "Hangar13", "HarebrainedSchemesLLC", 
+                       "HarmonixMusicSystems", "HBStudiosMultimedia", "HeadstrongGames","HeartBeat", "HighImpactGames", "HighMoonStudios", "HighVoltageSoftware", "HotheadGames", "Housemarque", "Hudson", 
+                       "HumanHeadStudios", "HumongousEntertainment", "Ice-PickLodge", "idSoftware", "IdeaFactory", "IdolMinds", "Image&Form", "ImageEpoch", "IncognitoInc.", "indieszero", 
+                       "InfinityWard", "Innerloop", "InsomniacGames", "IntelligentSystems", "Interplay", "Introversion", "InXileEntertainment", "IoInteractive", "IonStorm", "Irem", 
+                       "IronGalaxyStudios", "IronLoreEntertainment", "IrrationalGames", "IvoryTower", "JagexGamesStudio", "JalecoEntertainment", "JupiterCorporation", "Kalypso", "KaosStudios", "Kiloo", 
+                       "Koei", "KojimaProductions", "Konami", "KromeStudios", "KujuEntertainment", "KumaRealityGames", "KunosSimulazioni", "KushGames", "Kylotonn", "LarianStudiosGames", 
+                       "LegacyInteractive", "LegendEntertainment", "LegendoEntertainment", "Level5", "LimbicEntertainment", "LionheadStudios", "LiquidEntertainment", "LittleGreenMen", "Llamasoft", "LocomotiveGames", 
+                       "LookingGlassStudios", "LucasArts", "Luxoflux", "MachineGames", "MagentaSoftware", "Mages.", "MajescoGames", "Marvelous", "MassiveEntertainment", "MatrixSoftware", 
+                       "Maxis", "MediaMolecule", "MediaVision", "Mediatonic", "MercurySteam", "MetropolisSoftware", "MicroProse", "MicrosoftGameStudios", "Midway", "miHoYo", 
+                       "Milestone", "MilestoneS.r.l", "MimimiProductions", "Mistwalker", "Mitchell", "Mode7Games", "MojangAB", "MonolithProductions", "MonolithSoft", "MonsterGamesInc.", 
+                       "MonteCristoMultimedia", "MoonStudios", "MTO", "MythicEntertainment", "n-Space", "Nadeo", "Namco", "NapsTeam", "Natsume", "NaturalMotion", 
+                       "NaughtyDog", "NCSOFT", "NdCube", "NekoEntertainment", "NerveSoftware", "NetDevil", "NetherRealmStudios", "Neverland", "NeversoftEntertainment", "NeversoftEntertainment", 
+                       "Nexon", "NextLevelGames", "Nicalis", "NinjaTheory", "NinjaBee", "Nintendo", "NipponIchiSoftware", "NivalInteractive", "NovaLogic", "Novarama", 
+                       "NowProduction", "ObsidianEntertainment", "OddworldInhabitants", "OmegaForce", "OtherSideEntertainment", "OutrageGames", "OverkillSoftware", "OxygenInteractive", "Page44Studios", "PandemicStudios", 
+                       "PantherGames", "PapayaStudios", "ParadoxDevelopmentStudio", "ParallaxSoftware", "PenduloStudios", "PeopleCanFly", "PerfectWorldEntertainment", "Petroglyph", "Phantagram", "PipeworksSoftware", 
+                       "PiranhaBytes", "PiranhaGames", "PivotalGames", "PlatinumGames", "PlayFirst", "PlaygroundGames", "PolyphonyDigital", "PopCap", "PressPlay", "ProjectSoul", 
+                       "Psyonix", "PurpleLampStudios", "Q-Games", "QEntertainment", "QuanticDream", "Quest", "RadicalEntertainment", "RainbowStudios", "RareLtd.", "RavenSoftware", 
+                       "ReadyatDawn", "RealityPump", "RealtimeAssociates", "RealtimeWorlds", "Rebellion", "REDEntertainment", "RedStormEntertainment", "RedThreadGames", "RedLynx", "RedTribe", 
+                       "ReflexiveEntertainment", "Relic", "RemedyEntertainment", "RespawnEntertainment", "RetroStudios", "RevolutionSoftware", "RiotGames", "RisingStarGames", "RobotEntertainment", "RockstarGames", 
+                       "RocksteadyStudios", "RuffianGames", "RunicGames", "RunningWithScissors", "SaberInteractive", "SandGrainStudios", "Sandlot", "SanzaruGames", "SchellGames", "SCSSoftware", 
+                       "Sega", "Shift", "Shin'en", "SierraEntertainment", "SiliconKnights", "SiliconStudio", "SimTex", "Sir-TechSoftwareInc.", "SkipLtd", "SlantSix", 
+                       "SledgehammerGames", "SlightlyMadStudios", "SnailGames", "SnapshotGamesInc.", "SNK", "SnowbirdGameStudios", "SonyComputerEntertainment", "Spellbound", "Spiders", "Spike", 
+                       "SpikeChunsoft", "SplashDamage", "SproingInteractiveMedia", "Squad", "SquareEnix", "StainlessGames", "StainlessSteelStudios", "Starbreeze", "Stardock", "Sting", 
+                       "Stoic", "Stormregion", "StrawdogStudios", "StrayllightEntertainment", "StudioWildcard", "Success", "SuckerPunch", "SumoDigital", "SunstormInteractive", "SupermassiveGames", 
+                       "Survios", "Swingin'Ape", "synSophia", "SystemSoft", "T&ESoft", "TaitoCorporation", "TaleworldsEntertainment", "Tamsoft", "TangoGameworks", "Tantalus", 
+                       "TarsierStudios", "TateMultimedia", "TeamBondi", "TeamNinja", "Team17", "Techland", "Tecmo", "TelltaleGames", "Tencent", "TequilaWorks", 
+                       "TerminalReality", "TetrisOnline", "Teyon", "ThatGameCompany", "TheBitmapBrothers", "TheChineseRoom", "TheCoalition", "TheFarm51", "THQ", "THQNordic", 
+                       "ThreeFieldsEntertainment", "ThreeRings", "TimeGateStudios", "ToeJam&EarlProductions", "TokyoRPGFactory", "TopWareInteractive", "TorpexGamesLLC", "TorusGames", "TOSE", "ToysforBob", 
+                       "TransmissionGames", "Trapdoor", "Traveller'sTales", "Treasure", "Treyarch", "Tri-Ace", "Tri-Crescendo", "TrionWorlds", "TripwireInteractive", "TriumphStudios", 
+                       "Turn10", "TurtleRockStudios", "TwoPointStudios", "TwoTribes", "TyphoonStudios", "Ubisoft", "UndeadLabs", "UnitedFrontGames", "Universomo", "ValveSoftware", 
+                       "VanillaWare", "Vanpool", "VenanEntertainment", "VicariousVisions", "VigilGames", "Virtuos", "VisceralGames", "VisualConcepts", "Wargaming.net", "WarhorseStudios", 
+                       "WarnerBros.InteractiveEntertainment", "WebfootTechnologies", "WestwoodStudios", "WideloadGamesInc.", "WildfireStudios", "WorldForge", "Yager", "Yuke's", "ZenStudios", "ZeniMaxMedia", 
+                       "ZipperInteractive", "ZombieStudios", "ZootFly")
+```
+
+#Città Sviluppatori
+```{r}
+città_sviluppatori <- c("Warsaw", "Moscow", "Novato", "Redmond", "Garland", "Kyiv", "Bellevue", "Foster City", "Osaka", "Glen Cove", 
+                        "Santiago de Chile", "Chiyoda", "Kyiv", "Santa Monica", "Moscow", "Kumamoto City", "Irvine","Tokyo", "Tokyo", "Hino", 
+                        "Roubaix", "Tokyo", "Kanagawa", "Yokohama", "Durham", "Bellevue", "Tokyo", "Lyon","Paris", "Tokyo", 
+                        "Tsukishima", "Tokyo", "Gainesville", "Yokohama", "Yokohama", "Gütersloh", "Bordeaux", "Pawtucket", "Tokyo", "Middlesbrough", 
+                        "Stockholm", "Minato", "Tokyo", "Quebec City", "Montreal", "Luhansk", "Rockville", "Ontario", "Salt Lake City", "Baltimore", 
+                        "Edmonton", "London", "Liverpool", "Offenburg",  "Orange County", "Brighton", "Leamington Spa", "Irvine", "Kraków", "Waltham", 
+                        "Seongnam", "Austin", "Seoul", "Prague", "Raleigh", "Hunt Valley", "Guildford", "Bellevue", "Tokyo", "Osaka", 
+                        "Aliso Viejo", "Tokyo", "Bratislava", "Shinjuku", "Tokyo", "Reykjavík", "Warsaw", "Austin", "Salt Lake City", "Shinjuku", ##
+                        "Fukuoka", "Yokohama", "Portsmouth", "Tokyo", "Osaka", "Southam", "Skövde", "Cardiff", "Tampere", "Tokyo", 
+                        "Montreal", "Derby", "Osaka", "Croydon", "Tokyo", "Canton", "Horsham", "Tokyo", "Guildford", "Zagreb", 
+                        "Paris", "Los Gatos", "Redwood City", "Frankfurt", "Tokyo", "Mead", "Fukuoka", "Northampton", "Tokyo", "Los Angeles", 
+                        "Chicago", "San Diego", "Copenhagen", "Frankfurt", "Champaign", "Cambridge", "Copenhagen", "Emeryville", "London", "Budapest", 
+                        "Osaka", "Glendale", "Paris", "Paris", "San Francisco", "Chatham", "Eugene", "Redwood City", "Lyon", "Würselen", 
+                        "Tokyo", "Paris", "Doetinchem", "Cary", "Tokyo", "Lyon", "Paris", "Derby", "Runcorn", "Tokyo", 
+                        "Walsall", "Big Bear Lake", "Redmond", "Stockholm", "Tokyo", "Gifu", "Sparks", "London", "Liverpool", "San Francisco", 
+                        "Gifu", "Warsaw", "Paris", "Emeryville", "Helsingborg", "Kyiv", "Tokyo", "Cambridge", "Helsinki", "Bucharest", 
+                        "Oslo", "Tokyo", "Espoo", "Moscow", "Chiyoda", "Setagaya-ku", "Paris", "Fukuoka", "Plano", "Tokyo", 
+                        "Shinjuku", "Kobe", "Nonoichi", "Chiyoda", "Seoul", "Los Angeles", "Shibuya", "Auckland", "Kirkland", "Kyiv", 
+                        "Cambridge", "Amsterdam", "Austin", "Chiyoda", "Nagano", "Sapporo", "Sofia", "Chiyoda", "Novato", "Seattle", 
+                        "Cambridge", "Lunenburg", "London", "Tokyo", "Burbank", "San Diego", "Hoffman Estates", "Vancouver", "Helsinki", "Tokyo", 
+                        "Madison", "Bothell", "Moscow", "Mesquite", "Shibuya", "Westminster", "Gothenburg", "Tokyo", "Salt Lake City", "Musashino", 
+                        "Woodland Hills", "Oslo", "Burbank", "Tokyo", "Beverly Hills", "London", "Newport Beach", "Copenhagen", "Dallas", "Hakusan", 
+                        "Chicago", "Maynard", "Quincy", "Lyon", "Cambridge", "Tokyo", "Kyoto", "Worms", "New York City", "Aarhus", 
+                        "Ashikaga", "Tokyo", "Tokyo", "Brisbane", "Shalford", "New York City", "Rome", "Camarillo", "Paris", "Oudenaarde", 
+                        "Los Angeles", "Chantilly", "Gothenburg", "Fukuoka", "Langen", "Guildford", "Pasadena", "Zagreb", "Reading", "Santa Clara", 
+                        "Cambridge", "San Francisco", "Santa Monica", "Uppsala", "Liverpool", "Shibuya", "Edison", "Shibuya", "Malmö", "Tokyo", 
+                        "Emeryville", "Guildford", "Tokyo", "London", "Madrid", "Warsaw", "Hunt Valley", "Redmond", "Chicago", "Shanghai", 
+                        "Suginami", "Milan", "Munich", "Tokyo", "Tokyo", "Brighton", "Stockholm", "Kirkland", "Tokyo", "Northfield", 
+                        "Paris", "Vienna", "Yokohama", "Fairfax", "Orlando", "Paris", "Tokyo", "Messina", "Shinjuku", "London", 
+                        "Santa Monica", "Seoul", "Tokyo", "Montreuil-sous-Bois", "Richardson", "Louisville", "Chicago", "Tokyo", "Woodland Hills", "Agoura Hills", 
+                        "Tokyo", "Vancouver", "Santa Ana", "Cambridge", "Orem", "Kyoto", "Kakamigahara", "St. Petersburg", "Agoura Hills", "Barcelona", 
+                        "Osaka", "Irvine", "San Luis Obispo", "Ashikaga", "Boston", "Ann Arbor", "Stockholm", "Croydon", "San Francisco", "Los Angeles", 
+                        "Canberra", "Irvine", "Stockholm", "Ann Arbor", "Madrid", "Warsaw", "Beijing", "Las Vegas", "Seoul", "Eugene", 
+                        "Essen", "Vancouver", "Bath", "Osaka", "San Francisco", "Leamington Spa", "Tokyo", "Seattle", "Copenhagen", "Tokyo", 
+                        "San Diego", "Vienna", "Nakagyō-ku", "Tokyo", "Paris", "Tokyo", "Vancouver", "Phoenix", "Twycross", "Middleton", 
+                        "Irvine", "Kraków", "Los Angeles", "Dundee", "Oxford", "Tokyo", "Cary", "Oslo", "Helsinki", "Melbourne", 
+                        "Lake Forest", "Vancouver", "Espoo", "Sherman Oaks", "Austin", "York", "Santa Monica", "Luton", "Plano", "New York City", 
+                        "London", "Dundee", "Seattle", "Tucson", "Millburn", "Bucharest", "Tokyo", "Foster City", "Pittsburgh", "Prague", 
+                        "Ota", "Kanagawa", "Munich", "Oakhurst", "St. Catharines", "Tokyo", "Austin", "Ogdensburg", "Tokyo", "Vancouver", 
+                        "Foster City", "London", "Suzhou", "Sofia", "Osaka", "Seattle", "Tokyo", "Offenburg", "Paris", "Tokyo", 
+                        "Tokyo", "London", "Vienna", "Mexico City", "Shinjuku", "Newport", "Cambridge", "Uppsala", "Plymouth", "Tokyo", 
+                        "Austin", "Budapest", "Derby", "Dunedin", "Kirkland", "Tokyo", "Bellevue", "Sheffield", "Indianapolis", "Guildford", 
+                        "Los Angeles", "Aliso Viejo", "Tokyo", "Tokyo", "Aichi", "Shinjuku", "Ankara", "Asakusa", "Minato", "Melbourne", 
+                        "Malmö", "Warsaw", "Sydney", "Tokyo", "Ossett", "Ostrów Wielkopolski", "Tokyo", "San Rafael", "Shenzhen", "Madrid", 
+                        "Lewisville", "Honolulu", "Kraków", "Santa Monica", "London", "Brighton", "Vancouver", "Gliwice", "Agoura Hills", "Vienna", 
+                        "Petersfield", "San Francisco", "Sugar Land", "San Francisco", "Tokyo", "Karlsruhe", "Bellevue", "Bayswater", "Kyoto", "Novato", 
+                        "Melbourne", "Montreal", "Knutsford", "Tokyo", "Santa Monica", "Tokyo", "Tokyo", "Redwood City", "Roswell", "Delft", 
+                        "Redmond", "Lake Forest", "Surrey", "Amersfoort", "Hong Kong", "Montreuil-sous-Bois", "Seattle", "Vancouver", "Tampere", "Kirkland", 
+                        "Chūō-ku", "Tokyo", "Cromwell", "Albany", "Austin", "Singapore", "Redwood City", "Novato", "Nicosia", "Prague", 
+                        "Chicago", "Chicago", "Las Vegas", "Chicago", "Brisbane", "Voronezh", "Berlin", "Osaka", "Budapest", "Hunt Valley", 
+                        "Redmond", "Seattle", "Ljubljana")
+```
+
+#Stato Sviluppatori
+```{r} 
+stato_sviluppatori <- c("Poland", "Russia", "United States", "United States", "United States", "Ukraine", "United States", "United States", "Japan", "United States", 
+                        "Chile", "Japan", "Ukraine", "United States", "Russia", "Japan", "United States", "Japan", "Japan", "Japan", 
+                        "France", "Japan", "Japan", "Japan", "United States", "United States", "Japan", "France", "France", "Japan", 
+                        "Japan", "Japan", "United States", "Japan", "Japan", "Germany", "France", "United States", "Japan", "United Kingdom", 
+                        "Sweden", "Japan", "Japan", "Canada", "Canada", "Ukraine", "United States", "Canada", "United States", "United States", 
+                        "Canada", "United Kingdom", "United Kingdom", "Germany", "United States", "United Kingdom", "United Kingdom", "United States", "Poland", "United States", 
+                        "South Korea", "United States", "South Korea", "Czech Republic", "United States", "United States", "United Kingdom", "United States", "Japan", "Japan", 
+                        "United States", "Japan", "Slovakia", "Japan", "Japan", "Iceland", "Poland", "United States", "United States", "Japan", ##
+                        "Japan", "Japan", "United Kingdom", "Japan", "Japan", "United Kingdom", "Sweden", "United Kingdom", "Finland", "Japan", 
+                        "Canada", "United Kingdom", "Japan", "United Kingdom", "Japan", "United States", "United Kingdom", "Japan", "United Kingdom", "Croatia", 
+                        "France", "United States", "United States", "Germany", "Japan", "United States", "Japan", "United States", "Japan", "United States", 
+                        "United States", "United States", "Denmark", "Germany", "United States", "United States", "Denmark", "United States", "Canada", "Hungary", 
+                        "Japan", "United States", "France", "France", "United States", "United Kingdom", "United States", "United States", "France", "Germany", 
+                        "Japan", "France", "Netherlands", "United States", "Japan", "France", "France", "United Kingdom", "United Kingdom", "Japan", 
+                        "United Kingdom", "United States", "United States", "Sweden", "Japan", "Japan", "United States", "United Kingdom", "United Kingdom", "United States", 
+                        "Japan", "Poland", "France", "United States", "Sweden", "Ukraine", "Japan", "United Kingdom", "Finland", "Romania", 
+                        "Norway", "Japan", "Finland", "Russia", "Japan", "Japan", "France", "Japan", "United States", "Japan", 
+                        "Japan", "Japan", "Japan", "Japan", "South Korea", "United States", "Japan", "New Zealand", "United States", "Ukraine", 
+                        "United Kingdom", "Netherlands", "United States", "Japan", "Japan", "Japan", "Bulgaria", "Japan", "United States", "United States", 
+                        "United States", "Canada", "United Kingdom", "Japan", "United States", "United States", "United States", "Canada", "Finland", "Japan", 
+                        "United States", "United States", "Russia", "United States", "Japan", "United States", "Sweden", "Japan", "United States", "Japan", 
+                        "United States", "Norway", "United States", "Japan", "United States", "United Kingdom", "United States", "Denmark", "United States", "Japan", 
+                        "United States", "United States", "United States", "France", "United Kingdom", "Japan", "Japan", "Germany", "United States", "Denmark", 
+                        "Japan", "Japan", "Japan", "Australia", "United Kingdom", "United States", "Italy", "United States", "France", "Belgium", 
+                        "United States", "United States", "Sweden", "Japan", "Germany", "United Kingdom", "United States", "Croatia", "United Kingdom", "United States", 
+                        "United States", "United States", "United States", "Sweden", "United Kingdom", "Japan", "United States", "Japan", "Sweden", "Japan", 
+                        "United States", "United Kingdom", "Japan", "United Kingdom", "Spain", "Poland", "United States", "United States", "United States", "China", 
+                        "Japan", "Italy", "Germany", "Japan", "Japan", "United Kingdom", "Sweden", "United States", "Japan", "United States", 
+                        "France", "Austria", "Japan", "United States", "United States", "France", "Japan", "Italy", "Japan", "United Kingdom", 
+                        "United States", "South Korea", "Japan", "France", "United States", "United States", "United States", "Japan", "United States", "United States", 
+                        "Japan", "Canada", "United States", "United Kingdom", "United States", "Japan", "Japan", "Russia", "United States", "Spain", 
+                        "Japan", "United States", "United States", "Japan", "United States", "United States", "Sweden", "United Kingdom", "United States", "United States", 
+                        "Australia", "United States", "Sweden", "United States", "Spain", "Poland", "China", "United States", "South Korea", "United States", 
+                        "Germany", "Canada", "United Kingdom", "Japan", "United States", "United Kingdom", "Japan", "United States", "Denmark", "Japan", 
+                        "United States", "Austria", "Japan", "Japan", "France", "Japan", "Canada", "United States", "United Kingdom", "United States", 
+                        "United States", "Poland", "United States", "United Kingdom", "United Kingdom", "Japan", "United States", "Norway", "Finland", "Australia", 
+                        "United States", "Canada", "Finland", "United States", "United States", "United Kingdom", "United States", "United Kingdom", "United States", "United States", 
+                        "United Kingdom", "United Kingdom", "United States", "United States", "United States", "Romania", "Japan", "United States", "United States", "Czech Republic", 
+                        "Japan", "Japan", "Germany", "United States", "Canada", "Japan", "United States", "Canada", "Japan", "Canada", 
+                        "United States", "United Kingdom", "China", "Bulgaria", "Japan", "United States", "Japan", "Germany", "France", "Japan", 
+                        "Japan", "United Kingdom", "Austria", "Mexico", "Japan", "United Kingdom", "United States", "Sweden", "United States", "Japan", 
+                        "United States", "Hungary", "United Kingdom", "New Zealand", "United States", "Japan", "United States", "United Kingdom", "United States", "United Kingdom", 
+                        "United States", "United States", "Japan", "Japan", "Japan", "Japan", "Turkey", "Japan", "Japan", "Australia", 
+                        "Sweden", "Poland", "Australia", "Japan", "United Kingdom", "Poland", "Japan", "United States", "China", "Spain", 
+                        "United States", "United States", "Poland", "United States", "United Kingdom", "United Kingdom", "Canada", "Poland", "United States", "Austria", 
+                        "United Kingdom", "United States", "United States", "United States", "Japan", "Germany", "United States", "Australia", "Japan", "United States", 
+                        "Australia", "Canada", "United Kingdom", "Japan", "United States", "Japan", "Japan", "United States", "United States", "Netherlands", 
+                        "United States", "United States", "United Kingdom", "Netherlands", "China", "France", "United States", "Canada", "Finland", "United States", 
+                        "Japan", "Japan", "United States", "United States", "United States", "Singapore", "United States", "United States", "Cyprus", "Czech Republic", 
+                        "United States", "United States", "United States", "United States", "Australia", "Russia", "Germany", "Japan", "Hungary", "United States", 
+                        "United States", "United States", "Slovenia")
+```
+
+#Anno Fondazione Sviluppatori
+```{r}
+fondazione_sviluppatori <- c("2010", "1991", "2005", "2009", "1987", "2005", "2003", "1995", "2002", "1987", 
+                             "2007", "1994", "1995", "1979", "1995", "1988", "2007", "1996", "2000", "1990", 
+                             "2001", "2005", "2002", "1988", "2009", "2000", "1995", "1999", "2006", "1995", 
+                             "1986", "1989", "2001", "1999", "2010", "1989", "2002", "1995", "1986", "2000", 
+                             "2003", "1955", "1994", "2000", "1992", "1991", "2001", "2004", "2007", "2000", 
+                             "1995", "1991", "1994", "2012", "1996", "1998", "1990", "1991", "2008", "1998", 
+                             "2007", "2006", "2003", "1999", "2014", "1998", "1987", "1991", "1990", "1979", 
+                             "2005", "1998", "1996", "1994", "2000", "1997", "2002", "2006", "2005", "1984", ##
+                             "1999", "1998", "1988", "1990", "2004", "1985", "2010", "2006", "2009", "2006", 
+                             "2009", "1988", "2004", "1997", "1988", "1990", "1987", "1995", "1993", "1993", 
+                             "1992", "2000", "1992", "1999", "1980", "1987", "1996", "1992", "2011", "1995", 
+                             "2001", "1997", "1996", "2001", "1996", "2002", "2006", "1992", "1993", "1991", 
+                             "2000", "1988", "2008", "2007", "2000", "2008", "1984", "1982", "1998", "1988", 
+                             "1993", "1999", "1995", "1991", "1987", "1994", "2000", "1988", "1999", "2007", 
+                             "2009", "1989", "1994", "2008", "1992", "2010", "1996", "1999", "2012", "2003", 
+                             "1989", "2009", "1996", "1992", "2001", "2000", "1986", "1994", "2001", "1999", 
+                             "1993", "2007", "1997", "2002", "1985", "1989", "1999", "1999", "1999", "2002", 
+                             "1990", "2005", "2011", "1998", "2000", "1993", "2006", "2006", "1994", "1995", 
+                             "1997", "2000", "2014", "1998", "1993", "1993", "1997", "1980", "2014", "2011", 
+                             "1995", "2000", "2000", "1992", "2003", "2005", "1993", "2006", "1995", "1973", 
+                             "1997", "1992", "2002", "1991", "1994", "1997", "1997", "2005", "1999", "1997", 
+                             "2002", "1996", "1994", "1986", "1983", "2002", "2002", "1998", "1996", "1974", 
+                             "2008", "2000", "1996", "2007", "2001", "1974", "1996", "2006", "2006", "2000", 
+                             "1978", "2005", "1969", "1999", "1998", "2003", "2005", "1998", "2002", "1996", 
+                             "1998", "1989", "2004", "1998", "2002", "1997", "1999", "2006", "1982", "1997", 
+                             "1990", "1982", "1998", "2009", "1994", "2005", "1986", "1997", "1997", "1994", 
+                             "1987", "2006", "1993", "2005", "2002", "1992", "1982", "2013", "1988", "2012", 
+                             "2003", "1996", "2011", "2004", "1960", "2005", "2009", "1994", "1999", "1996", 
+                             "1995", "2010", "1996", "1995", "1994", "2000", "1986", "1993", "1987", "2001", 
+                             "1986", "1997", "2000", "1998", "1999", "1997", "2010", "1993", "1994", "1984", 
+                             "2002", "2002", "2007", "2000", "2005", "1889", "1991", "1996", "1985", "2003", 
+                             "1986", "2004", "1994", "1997", "2013", "1996", "2009", "2006", "1998", "1998", 
+                             "1985", "1999", "1995", "1993", "1993", "2002", "2004", "2003", "1994", "1999", 
+                             "1997", "2000", "2000", "2006", "2004", "2009", "1998", "2000", "2006", "1996", 
+                             "2001", "2018", "2001", "2003", "1997", "1988", "1991", "1996", "1985", "1990", 
+                             "2003", "1995", "1986", "2002", "1992", "1976", "1996", "2012", "2000", "2003", 
+                             "1997", "1997", "1995", "2010", "1998", "1990", "2006", "2004", "2009", "1998", 
+                             "2005", "2008", "2008", "1997", "2001", "2002", "2001", "2006", "2002", "1997", 
+                             "1960", "1996", "1999", "1979", "1992", "2000", "1988", "1979", "2000", "2005", 
+                             "2009", "2008", "2000", "2013", "2001", "1997", "1994", "1994", "2008", "1991", 
+                             "2012", "2001", "2001", "2009", "1975", "1993", "1998", "1998", "1991", "1989", 
+                             "2011", "2001", "2003", "2004", "2014", "1978", "1997", "2003", "1995", "2008", 
+                             "2013", "2000", "1995", "1999", "1982", "1953", "2005", "1992", "2010", "1994", 
+                             "2004", "2002", "2003", "1995", "1990", "1991", "1967", "2004", "1998", "2009", 
+                             "1994", "2006", "2006", "2006", "1987", "2007", "2010", "2005", "1989", "2011", 
+                             "2014", "2001", "1998", "1989", "2014", "1995", "2005", "1994", "1979", "1989", 
+                             "1996", "2010", "1990", "1992", "1996", "1995", "1999", "2006", "2005", "1997", 
+                             "2001", "2002", "2016", "2000", "2001", "1986", "2009", "2006", "2002", "1996", 
+                             "2002", "1999", "2002", "1990", "2005", "2004", "1998", "1988", "1998", "2011", 
+                             "1988", "1993", "1985", "2003", "1995", "2004", "1999", "1993", "2003", "2007", 
+                             "1995", "1994", "2002")
+```
+
+```{r}
+Sviluppatori_VGlist <- data.frame(
+                      "Sviluppatore" = nomi_sviluppatori,
+                      "Città" = città_sviluppatori,
+                      "Stato" = stato_sviluppatori,
+                      "Fondazione" = fondazione_sviluppatori
+                      )
+
+write.csv(Sviluppatori_VGlist, file = "Sviluppatori_VGlist.csv")
+```
+
+
+## I miei videogames
+
+```{r}
+
+Gioco <- c("Pokemon Alpha Sapphire", "Pokemon Black Version", "Pokemon Black Version 2", "Pokemon Diamond Version", "Pokemon Emerald Version", "Pokemon HeartGold Version",
+           "Pokemon Moon", "Pokemon Mystery Dungeon: Blue Rescue Team", "Pokemon Platinum Version", "Pokemon Ranger", "Pokemon Rumble World", "Pokemon Ultra Moon",
+           "Pokemon Y", "New Super Mario Bros.", "Super Mario 64 DS", "Mario Kart Wii", "Borderlands", "Borderlands: The Pre-Sequel", "Sid Meier's Civilization VI", 
+           "Assassin's Creed IV: Black Flag", "Assassin's Creed Origins", "Assassin's Creed Syndicate", "Farming Simulator 15", "Farming Simulator 19", 
+           "Star Wars: The Old Republic", "Star Wars Jedi: Fallen Order", "Battlefield V", "FIFA 22", "FIFA 23", "Skylanders Swap Force", "Skylanders Giants", "Minecraft",
+           "F1 2022", "Valorant", "Rocket League", "Star Wars Jedi: Survivor", "Elden Ring", "SCARLET NEXUS", "League of Legends", "Dark Souls", "Dark Souls III")
+
+MioVoto <- c(9.2, 10.0, 10.0, 8.2, 8.7, 9.2, 5.5, 7.0, 9.2, 7.0, 6.5, 5.5, 7.5, 7.0, 7.0, 9.3, 6.4, 6.4 ,10.0 ,9.0 ,8.3 ,5.0 ,7.0 ,7.0 ,5.8 ,8.3 ,7.2 ,6.3 ,6.5 , 5.1, 
+             7.7 ,8.0 ,7.8 ,6.8 ,6.8 ,8.1 ,9.1 ,8.3 ,4.0, 8.2, 9.8)
+
+roba_mia <- data.frame(
+  "Gioco" = Gioco,
+  "MioVoto" = MioVoto
+)
+
+roba_mia_data <- left_join(roba_mia, VGList2) 
+
+roba_mia_data <- roba_mia_data %>%
+  filter(Piattaforma == "DS" | Piattaforma == "3DS" | Piattaforma == "Wii" | 
+         Piattaforma == "PC" | Piattaforma == "GameBoyAdvance"| Piattaforma == "PlayStation3")
+
+roba_mia_data <- roba_mia_data[-c(17, 19, 22, 33, 36, 37), ]
+
+indice_riga <- 1
+
+while (indice_riga <= nrow(roba_mia_data)) {
+  
+  for (i in 10:12) {
+    if(!is.na(roba_mia_data[indice_riga, i]) && 
+        !is.na(roba_mia_data[indice_riga, i - 1]) && 
+        roba_mia_data[indice_riga, i] == roba_mia_data[indice_riga, i - 1]){
+      roba_mia_data[indice_riga, i] <- NA
+    }
+  }
+  
+  indice_riga <- indice_riga + 1
+  
+}
+
+write.csv(roba_mia_data, file = "MyGames.csv")
+```
